@@ -9,7 +9,7 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-zinc-50 text-zinc-950 dark:bg-zinc-950 dark:text-zinc-50">
       <main className="mx-auto flex w-full max-w-none flex-col gap-10 px-6 py-12">
-        <header className="grid gap-6 lg:grid-cols-[1fr_420px] lg:items-start">
+        <header className="grid gap-6 lg:grid-cols-[1fr_560px] lg:items-start">
           <div className="flex flex-col gap-4">
             <div className="flex flex-col gap-2">
               <div className="text-4xl font-black tracking-tight sm:text-5xl">
@@ -31,12 +31,6 @@ export default function Home() {
             <div className="mt-3">
               <NewsletterForm variant="compact" tone="onDark" />
             </div>
-            <a
-              className="mt-3 inline-flex text-xs font-medium text-blue-100/80 underline-offset-2 hover:underline"
-              href="#newsletter"
-            >
-              Prefer the full signup section ↓
-            </a>
           </div>
         </header>
 
@@ -47,7 +41,8 @@ export default function Home() {
                 Case studies
               </h2>
               <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-                Sorted by newest first by default. Click a row to expand.
+                Sorted by newest first by default. Click a row to see full details
+                of the case study including sources.
               </p>
             </div>
             <div className="text-sm text-zinc-600 dark:text-zinc-400">

@@ -165,20 +165,24 @@ export default function CaseStudiesTable({
                     <td className="border-b border-zinc-200 px-4 py-3 font-mono text-xs text-zinc-600 dark:border-zinc-800 dark:text-zinc-400">
                       {cs.date}
                     </td>
-                    <td className="border-b border-zinc-200 px-4 py-3 font-medium dark:border-zinc-800">
-                      <MoneyText text={cs.title} />
+                    <td className="border-b border-zinc-200 px-4 py-3 dark:border-zinc-800">
+                      <div className="text-base font-semibold leading-6">
+                        <MoneyText text={cs.title} />
+                      </div>
+                    </td>
+                    <td className="border-b border-zinc-200 px-4 py-3 text-zinc-700 dark:border-zinc-800 dark:text-zinc-300">
+                      <div className="leading-6">
+                        <MoneyText text={cs.summary} />
+                      </div>
                       {!!cs.tags?.length && (
                         <div className="mt-2 flex flex-wrap gap-2">
-                          {cs.tags.slice(0, 6).map((t) => (
+                          {cs.tags.slice(0, 8).map((t) => (
                             <span key={t} className={pillClasses()}>
                               {t}
                             </span>
                           ))}
                         </div>
                       )}
-                    </td>
-                    <td className="border-b border-zinc-200 px-4 py-3 text-zinc-700 dark:border-zinc-800 dark:text-zinc-300">
-                      <MoneyText text={cs.summary} />
                     </td>
                     <td className="border-b border-zinc-200 px-4 py-3 dark:border-zinc-800">
                       <span className={statusPillClasses(cs.status ?? "unverified")}>
