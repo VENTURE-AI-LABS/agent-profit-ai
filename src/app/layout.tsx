@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://agentprofit.ai"),
-  title: "AgentProfit.ai — AI agent profit case studies",
+  title: "How AI agents make money — documented case studies | AgentProfit.ai",
   description:
     "A living catalog of publicly verifiable case studies showing how AI agents make money (or profit) in the wild. Not financial advice.",
 };

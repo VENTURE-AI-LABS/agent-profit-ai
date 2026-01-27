@@ -1,5 +1,90 @@
 [
   {
+    "id": "2025-12-05-arc-prize-2025-cash-prizes",
+    "date": "2025-12-05",
+    "title": "ARC Prize 2025: AI reasoning systems win $25k/$10k/$5k and $50k paper awards",
+    "summary": "ARC Prize publishes cash prize winners for ARC-AGI competitions, paying top solution teams and research papers with public leaderboards and links.",
+    "description": "ARC Prize runs public competitions around the ARC-AGI benchmarks. In ARC Prize 2025, the organizers publicly list prize winners (high-score solutions and paper awards), including prize amounts, teams/authors, and source links.\n\nThis is a straightforward monetization path for agentic/reasoning systems: enter a competition, publish a verifiable score, and receive prize payouts (often with open-source code/paper artifacts).",
+    "profitMechanisms": [
+      "Competition prize payouts (e.g., $25k, $10k, $5k)",
+      "Research paper awards (e.g., $50k, $20k, $5k)"
+    ],
+    "tags": ["competitions", "prizes", "reasoning", "agents", "benchmarks"],
+    "proofSources": [
+      {
+        "label": "ARC Prize 2025 Results & Analysis (published Dec 5, 2025)",
+        "url": "https://arcprize.org/blog/arc-prize-2025-results-analysis",
+        "kind": "article",
+        "excerpt": "Winner tables list High Score prizes (e.g., $25k, $10k, $5k) and Paper Awards (e.g., $50k)."
+      },
+      {
+        "label": "ARC Prize 2025 competition winners page",
+        "url": "https://arcprize.org/competitions/2025/",
+        "kind": "website"
+      }
+    ],
+    "status": "verified"
+  },
+  {
+    "id": "2025-08-08-darpa-aixcc-prize-winners",
+    "date": "2025-08-08",
+    "title": "DARPA AI Cyber Challenge: autonomous cyber reasoning systems win $4M / $3M / $1.5M",
+    "summary": "DARPA’s AI Cyber Challenge awarded multi-million dollar prizes to teams building autonomous systems that find and patch vulnerabilities in open-source software.",
+    "description": "DARPA’s AI Cyber Challenge (AIxCC) is a two-year competition to build cyber reasoning systems (CRSs) that automatically identify and patch vulnerabilities. In the Final Competition, DARPA reports the top three teams and prize amounts: Team Atlanta won $4M, Trail of Bits won $3M, and Theori won $1.5M.\n\nThis is a direct, verifiable example of AI agents making money via competition prize awards for autonomous vulnerability discovery and patching.",
+    "profitMechanisms": [
+      "Competition prizes for autonomous vulnerability discovery + patching ($4M / $3M / $1.5M)",
+      "Potential follow-on integration prizes and commercialization via open-source CRS releases"
+    ],
+    "tags": ["cybersecurity", "bug-bounty", "competitions", "patching", "autonomy"],
+    "proofSources": [
+      {
+        "label": "DARPA: AI Cyber Challenge results (Aug 8, 2025)",
+        "url": "https://www.darpa.mil/news/2025/aixcc-results",
+        "kind": "article",
+        "excerpt": "Top three teams will receive $4 million, $3 million, and $1.5 million, respectively."
+      },
+      {
+        "label": "Trail of Bits: Buttercup wins 2nd place and $3M (Aug 9, 2025)",
+        "url": "https://blog.trailofbits.com/2025/08/09/trail-of-bits-buttercup-wins-2nd-place-in-aixcc-challenge/",
+        "kind": "article",
+        "excerpt": "Runner-up prize of $3M; Team Atlanta won $4M; Theori won $1.5M."
+      },
+      {
+        "label": "AIxCC archive (open-source releases)",
+        "url": "https://archive.aicyberchallenge.com/",
+        "kind": "website"
+      }
+    ],
+    "status": "verified"
+  },
+  {
+    "id": "2025-06-24-xbow-hackerone-top-1",
+    "date": "2025-06-24",
+    "title": "XBOW: autonomous pentesting agent reaches #1 on HackerOne US leaderboard",
+    "summary": "XBOW reports its autonomous pentesting system climbed to #1 on the HackerOne US leaderboard after submitting ~1,060 vulnerability reports across bounty programs.",
+    "description": "XBOW describes “dogfooding” their autonomous pentesting agent in public and private bug bounty programs on HackerOne, then climbing to the #1 US leaderboard rank. They report submitting nearly 1,060 vulnerability reports, spanning many vulnerability classes.\n\nThis represents a real-world, production-environment path to revenue: automated vulnerability discovery + responsible submission into paid bug bounty ecosystems. Note: the public posts/leaderboard demonstrate activity and rank; they do not enumerate specific bounty payouts tied to individual reports in the sources below.",
+    "profitMechanisms": [
+      "Bug bounty payouts for valid vulnerability reports (program-dependent)",
+      "Enterprise pentesting product revenue (B2B) from an autonomous pentesting agent"
+    ],
+    "tags": ["cybersecurity", "bug-bounty", "pentesting", "hackerone", "autonomous-agent"],
+    "proofSources": [
+      {
+        "label": "XBOW: The road to Top 1 (June 24, 2025)",
+        "url": "https://xbow.com/blog/top-1-how-xbow-did-it/",
+        "kind": "article",
+        "excerpt": "“XBOW submitted nearly 1,060 vulnerabilities.”"
+      },
+      {
+        "label": "XBOW: XBOW on HackerOne: What’s Next (Aug 18, 2025)",
+        "url": "https://xbow.com/blog/xbow-on-hackerone-whats-next",
+        "kind": "article",
+        "excerpt": "Claims reaching #1 on HackerOne leaderboards and describes validating/triaging workflow."
+      }
+    ],
+    "status": "unverified"
+  },
+  {
     "id": "2025-06-11-bountybench-bug-bounty-agents",
     "date": "2025-06-11",
     "title": "BountyBench: agents complete $47,821 in patch bounty value (benchmark)",
@@ -30,6 +115,27 @@
       }
     ],
     "status": "verified"
+  },
+  {
+    "id": "2025-01-22-agenthunter-5120-mrr-30-days",
+    "date": "2025-01-22",
+    "title": "AgentHunter.io: AI agent discovery platform reports $5,120 MRR in 30 days",
+    "summary": "A published growth write-up claims AgentHunter.io reached $5,120 MRR in 30 days, outlining pricing, acquisition channels, and tooling.",
+    "description": "A public case study write-up describes scaling AgentHunter.io (an AI agent discovery platform) from $0 to $5,120 MRR in 30 days. It lists reported user counts, traffic, conversion rates, pricing tiers, and marketing spend.\n\nThis is a common agent monetization pattern: build an agent-focused SaaS, charge subscription tiers, and grow via SEO + product launches.\n\nNote: this write-up is self-reported. The source does not provide a primary revenue dashboard export; treat the revenue figure as a public claim unless corroborated elsewhere.",
+    "profitMechanisms": [
+      "Subscription SaaS tiers (e.g., $19/mo starter, $49/mo pro, $149/mo team)",
+      "Programmatic SEO and distribution to drive recurring revenue"
+    ],
+    "tags": ["saas", "subscriptions", "seo", "agent-marketplace", "mrr"],
+    "proofSources": [
+      {
+        "label": "Orris AI: How We Scaled AgentHunter.io to $5K MRR in 30 Days (Jan 22, 2025)",
+        "url": "https://www.orris.ai/blog/scaling-agenthunter-to-5k-mrr",
+        "kind": "article",
+        "excerpt": "Reports “$5,120 MRR” and “$2,000” total marketing spend."
+      }
+    ],
+    "status": "unverified"
   }
 ]
 

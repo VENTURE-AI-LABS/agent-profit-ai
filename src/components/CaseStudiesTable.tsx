@@ -2,6 +2,7 @@
 
 import { Fragment, useMemo, useState } from "react";
 import type { CaseStudy } from "@/lib/types";
+import MoneyText from "@/components/MoneyText";
 
 type SortKey = "date" | "title" | "status";
 type SortDir = "asc" | "desc";
@@ -121,7 +122,7 @@ export default function CaseStudiesTable({
                       {cs.date}
                     </td>
                     <td className="border-b border-zinc-200 px-4 py-3 font-medium dark:border-zinc-800">
-                      {cs.title}
+                      <MoneyText text={cs.title} />
                       {!!cs.tags?.length && (
                         <div className="mt-2 flex flex-wrap gap-2">
                           {cs.tags.slice(0, 6).map((t) => (
@@ -133,7 +134,7 @@ export default function CaseStudiesTable({
                       )}
                     </td>
                     <td className="border-b border-zinc-200 px-4 py-3 text-zinc-700 dark:border-zinc-800 dark:text-zinc-300">
-                      {cs.summary}
+                      <MoneyText text={cs.summary} />
                     </td>
                     <td className="border-b border-zinc-200 px-4 py-3 dark:border-zinc-800">
                       <span className={pillClasses()}>
@@ -153,7 +154,7 @@ export default function CaseStudiesTable({
                               How it works
                             </div>
                             <div className="mt-2 whitespace-pre-wrap text-sm leading-6 text-zinc-800 dark:text-zinc-200">
-                              {cs.description}
+                              <MoneyText text={cs.description} />
                             </div>
 
                             {!!cs.profitMechanisms?.length && (
@@ -163,7 +164,9 @@ export default function CaseStudiesTable({
                                 </div>
                                 <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-zinc-800 dark:text-zinc-200">
                                   {cs.profitMechanisms.map((m) => (
-                                    <li key={m}>{m}</li>
+                                    <li key={m}>
+                                      <MoneyText text={m} />
+                                    </li>
                                   ))}
                                 </ul>
                               </div>
@@ -179,7 +182,7 @@ export default function CaseStudiesTable({
                                 {cs.proofSources.map((s) => (
                                   <li key={`${cs.id}:${s.url}`} className="leading-6">
                                     <a
-                                      className="break-words font-medium text-zinc-900 underline-offset-2 hover:underline dark:text-zinc-50"
+                                      className="wrap-break-word font-medium text-zinc-900 underline-offset-2 hover:underline dark:text-zinc-50"
                                       href={s.url}
                                       target="_blank"
                                       rel="noreferrer"
@@ -194,7 +197,7 @@ export default function CaseStudiesTable({
                                     )}
                                     {s.excerpt && (
                                       <div className="mt-1 text-xs text-zinc-600 dark:text-zinc-300">
-                                        {s.excerpt}
+                                        <MoneyText text={s.excerpt} />
                                       </div>
                                     )}
                                   </li>

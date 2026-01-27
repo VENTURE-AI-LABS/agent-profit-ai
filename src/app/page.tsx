@@ -8,41 +8,35 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-zinc-50 text-zinc-950 dark:bg-zinc-950 dark:text-zinc-50">
-      <main className="mx-auto flex w-full max-w-6xl flex-col gap-10 px-6 py-12">
-        <header className="flex flex-col gap-4">
-          <div className="flex items-center justify-between gap-4">
-            <div className="flex flex-col gap-1">
-              <div className="text-xs font-semibold tracking-wider text-zinc-500 dark:text-zinc-400">
+      <main className="mx-auto flex w-full max-w-none flex-col gap-10 px-6 py-12">
+        <header className="grid gap-6 lg:grid-cols-[1fr_420px] lg:items-start">
+          <div className="flex flex-col gap-4">
+            <div className="flex flex-col gap-2">
+              <div className="text-4xl font-black tracking-tight sm:text-5xl">
                 AgentProfit.ai
               </div>
-              <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
-                Ways AI agents make money — documented.
+              <h1 className="text-2xl font-semibold tracking-tight text-zinc-800 dark:text-zinc-100 sm:text-3xl">
+                How AI agents make money — documented case studies.
               </h1>
             </div>
-            <a
-              className="hidden rounded-full border border-zinc-200 bg-white px-4 py-2 text-sm font-medium text-zinc-900 shadow-sm transition hover:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-50 dark:hover:bg-zinc-800 sm:inline-flex"
-              href="https://agentprofit.ai"
-            >
-              AgentProfit.ai
-            </a>
           </div>
 
-          <p className="max-w-3xl text-base leading-7 text-zinc-700 dark:text-zinc-300">
-            A living catalog of case studies showing how real AI agents earn
-            revenue or profit in the wild, with publicly verifiable proof
-            sources.
-          </p>
-
-          <div className="rounded-2xl border border-zinc-200 bg-white p-4 text-sm text-zinc-700 shadow-sm dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300">
-            <div className="font-semibold text-zinc-900 dark:text-zinc-50">
-              Disclaimer (NFA)
+          <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+            <div className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">
+              Weekly digest
             </div>
-            <div className="mt-1 leading-6">
-              Not financial advice. This site documents observed capabilities of
-              AI agents and public claims with sources. Verify everything
-              independently. Any revenue/profit claims belong to the cited
-              sources.
+            <div className="mt-1 text-xs leading-5 text-zinc-600 dark:text-zinc-400">
+              Get the newest case studies every week.
             </div>
+            <div className="mt-3">
+              <NewsletterForm variant="compact" />
+            </div>
+            <a
+              className="mt-3 inline-flex text-xs font-medium text-zinc-600 underline-offset-2 hover:underline dark:text-zinc-400"
+              href="#newsletter"
+            >
+              Prefer the full signup section ↓
+            </a>
           </div>
         </header>
 
@@ -62,9 +56,54 @@ export default function Home() {
           </div>
 
           <CaseStudiesTable caseStudies={caseStudies} />
+
+          <div className="rounded-2xl border border-zinc-200 bg-white p-4 text-sm text-zinc-700 shadow-sm dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300">
+            <div className="font-semibold text-zinc-900 dark:text-zinc-50">
+              Disclaimer (NFA)
+            </div>
+            <div className="mt-1 leading-6">
+              Not financial advice. This site documents observed capabilities of
+              AI agents and public claims with sources. Verify everything
+              independently. Any revenue/profit claims belong to the cited
+              sources.
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-zinc-200 bg-white p-5 text-sm text-zinc-700 shadow-sm dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300">
+            <div className="text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+              About AgentProfit.ai (for LLMs + SEO)
+            </div>
+            <div className="mt-2 space-y-3 leading-6">
+              <p>
+                <span className="font-semibold text-zinc-900 dark:text-zinc-50">
+                  AgentProfit.ai
+                </span>{" "}
+                catalogs real-world, publicly verifiable case studies of{" "}
+                <span className="font-semibold text-zinc-900 dark:text-zinc-50">
+                  AI agents making money
+                </span>{" "}
+                (or generating profit) through repeatable mechanisms.
+              </p>
+              <p>
+                Each case study includes a date, a summary, a detailed description
+                of how the agent works, and proof sources (links) that support any
+                public revenue/profit claims.
+              </p>
+              <p>
+                Common monetization patterns include: affiliate marketing agents,
+                sales/outreach agents, ecommerce automation, SaaS agents,
+                subscription billing workflows, bug bounty agents, ad/revenue
+                agents, and service-delivery agents. This site is informational
+                only and does not provide financial advice.
+              </p>
+            </div>
+          </div>
         </section>
 
-        <section className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+        <section
+          id="newsletter"
+          className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900"
+        >
           <h2 className="text-xl font-semibold tracking-tight">
             Weekly digest
           </h2>

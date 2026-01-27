@@ -3,13 +3,14 @@
 import { useState } from "react";
 
 type Status = "idle" | "loading" | "success" | "error";
+type Variant = "default" | "compact";
 
 function isEmail(email: string) {
   // intentionally basic; server re-validates
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
-export default function NewsletterForm() {
+export default function NewsletterForm({ variant = "default" }: { variant?: Variant }) {
   const [email, setEmail] = useState("");
   const [status, setStatus] = useState<Status>("idle");
   const [message, setMessage] = useState<string>("");
@@ -57,10 +58,21 @@ export default function NewsletterForm() {
   }
 
   return (
-    <form onSubmit={onSubmit} className="flex w-full max-w-xl flex-col gap-3">
+    <form
+      onSubmit={onSubmit}
+      className={
+        variant === "compact"
+          ? "flex w-full flex-col gap-2"
+          : "flex w-full max-w-xl flex-col gap-3"
+      }
+    >
       <div className="flex flex-col gap-3 sm:flex-row">
         <input
-          className="w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-900 shadow-sm outline-none transition placeholder:text-zinc-400 focus:border-zinc-400 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-50 dark:placeholder:text-zinc-500 dark:focus:border-zinc-600"
+          className={
+            variant === "compact"
+              ? "w-full rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 shadow-sm outline-none transition placeholder:text-zinc-400 focus:border-zinc-400 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-50 dark:placeholder:text-zinc-500 dark:focus:border-zinc-600"
+              : "w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-900 shadow-sm outline-none transition placeholder:text-zinc-400 focus:border-zinc-400 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-50 dark:placeholder:text-zinc-500 dark:focus:border-zinc-600"
+          }
           type="email"
           autoComplete="email"
           placeholder="you@domain.com"
@@ -69,7 +81,11 @@ export default function NewsletterForm() {
           disabled={status === "loading"}
         />
         <button
-          className="inline-flex items-center justify-center rounded-xl bg-zinc-900 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-70 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-200"
+          className={
+            variant === "compact"
+              ? "inline-flex items-center justify-center rounded-xl bg-zinc-900 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-70 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-200"
+              : "inline-flex items-center justify-center rounded-xl bg-zinc-900 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-70 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-200"
+          }
           type="submit"
           disabled={status === "loading"}
         >
@@ -90,9 +106,11 @@ export default function NewsletterForm() {
         </div>
       )}
 
-      <div className="text-xs leading-5 text-zinc-500 dark:text-zinc-400">
-        Weekly digest. Unsubscribe any time.
-      </div>
+      {variant === "default" && (
+        <div className="text-xs leading-5 text-zinc-500 dark:text-zinc-400">
+          Weekly digest. Unsubscribe any time.
+        </div>
+      )}
     </form>
   );
 }
