@@ -1,7 +1,13 @@
 import { Fragment } from "react";
 
+// Highlight monetary amounts, including common suffixes and units.
+// Examples:
+// - $2 million
+// - $5,120 MRR
+// - $4M / $3M / $1.5M
+// - $25k-$50k
 const MONEY_RE =
-  /\$\d[\d,]*(?:\.\d+)?(?:\s?(?:k|m|b|K|M|B))?(?:-\$\d[\d,]*(?:\.\d+)?(?:\s?(?:k|m|b|K|M|B))?)?/g;
+  /\$\d[\d,]*(?:\.\d+)?(?:\s*(?:thousand|million|billion|trillion)\b|\s*(?:k|m|b|K|M|B)\b)?(?:\s*(?:MRR|ARR)\b)?(?:\s*[-–]\s*\$\d[\d,]*(?:\.\d+)?(?:\s*(?:thousand|million|billion|trillion)\b|\s*(?:k|m|b|K|M|B)\b)?(?:\s*(?:MRR|ARR)\b)?)?/g;
 
 function moneySpan(m: string) {
   return (

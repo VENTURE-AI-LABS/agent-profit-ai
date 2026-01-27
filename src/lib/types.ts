@@ -16,7 +16,7 @@ export type ProofSource = {
   excerpt?: string;
 };
 
-export type CaseStudyStatus = "verified" | "unverified";
+export type CaseStudyStatus = "verified" | "speculation";
 
 export type CaseStudy = {
   id: string;

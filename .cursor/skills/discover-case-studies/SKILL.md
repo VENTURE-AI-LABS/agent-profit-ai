@@ -32,7 +32,7 @@ At least one proof source should contain an **excerpt with the $ amount** (or a 
 - **Primary**: official dashboards, on-chain addresses, product pricing + live customer proof, public invoices/receipts, public revenue screenshots from the operator, public repos showing monetized automation + claims
 - **Secondary**: reputable articles summarizing the primary source
 
-Avoid unverifiable “trust me” claims. If it’s interesting but weak proof, include it as `status: "unverified"` and explain the gap in the description.
+Avoid unverifiable “trust me” claims. If it’s interesting but weak proof, include it as `status: "speculation"` and explain the gap in the description.
 
 ## Research workflow
 
@@ -63,7 +63,7 @@ Each item must match:
 - `profitMechanisms`: list of mechanisms
 - `tags`: short tags (e.g., `affiliate`, `saas`, `ecommerce`, `bounties`, `trading`, `ads`)
 - `proofSources`: array of `{ label, url, kind?, excerpt? }`
-- `status`: `verified` or `unverified` (default unverified if unsure)
+- `status`: `verified` or `speculation` (default speculation if unsure)
 
 ## Writing rules
 

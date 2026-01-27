@@ -26,6 +26,65 @@
     "status": "verified"
   },
   {
+    "id": "2025-09-02-google-adk-hackathon-salesshortcut-15000",
+    "date": "2025-09-02",
+    "title": "SalesShortcut: multi-agent SDR wins $15,000 in Google Cloud ADK Hackathon (grand prize)",
+    "summary": "SalesShortcut (a multi-agent sales development representative system) was named Grand Prize winner of Google Cloud’s Agent Development Kit (ADK) Hackathon.",
+    "description": "Google Cloud’s Agent Development Kit (ADK) Hackathon focused on building multi-agent systems. Google Cloud publicly lists SalesShortcut as the Grand Prize winner.\n\nIn the hackathon announcement, Google Cloud specifies that the overall grand prize includes $15,000 USD (plus additional credits and perks). This is a clear example of an agentic, multi-agent automation product making money via a public competition prize payout.",
+    "profitMechanisms": [
+      "Hackathon grand prize payout ($15,000) for a multi-agent system",
+      "Building a multi-agent automation product (sales SDR workflows) that can be monetized as software"
+    ],
+    "tags": ["hackathons", "prizes", "agents", "multi-agent", "sales", "automation"],
+    "proofSources": [
+      {
+        "label": "Google Cloud blog: ADK Hackathon announcement (prize amounts, May 27, 2025)",
+        "url": "https://cloud.google.com/blog/topics/developers-practitioners/join-the-agent-development-kit-hackathon-with-google-cloud?e=48754805",
+        "kind": "article",
+        "excerpt": "Overall grand prize: $15,000 in USD (plus $3,000 in Google Cloud Credits)."
+      },
+      {
+        "label": "Google Cloud blog: ADK Hackathon winners and highlights (Sept 2, 2025)",
+        "url": "https://cloud.google.com/blog/products/ai-machine-learning/adk-hackathon-results-winners-and-highlights",
+        "kind": "article",
+        "excerpt": "Grand Prize: SalesShortcut (listed as the Grand Prize winner)."
+      },
+      {
+        "label": "Devpost update: “And the winners are…” (SalesShortcut listed as Grand Prize winner)",
+        "url": "https://googlecloudmultiagents.devpost.com/updates/35783-and-the-winners-are",
+        "kind": "website"
+      }
+    ],
+    "status": "verified"
+  },
+  {
+    "id": "2025-09-01-minimax-ai-agent-challenge-grand-prize-30000",
+    "date": "2025-09-01",
+    "title": "MiniMax Agent Challenge: project wins $30,000 “Grand Prize” in $150,000 AI agent competition",
+    "summary": "MiniMax’s official winners page lists a $30,000 “Grand Prize” winner for its $150,000 AI Agent Challenge.",
+    "description": "MiniMax ran an online “AI Agent Challenge” with a stated $150,000 prize pool. MiniMax’s winners announcement page lists multiple prize tiers and projects.\n\nOne listed “Grand Prize” winner is the project titled “Turn any AI news to social media post,” shown alongside a $30,000 prize. This is a direct example of an AI-agent-built project earning cash via an official competition award with a public winners list.",
+    "profitMechanisms": [
+      "Competition cash prize payout ($30,000) for an AI-agent-built project",
+      "Potential follow-on monetization by turning the winning project into a product"
+    ],
+    "tags": ["competitions", "prizes", "agents", "automation", "content", "marketing"],
+    "proofSources": [
+      {
+        "label": "MiniMax AI Agent Challenge winners announcement (lists $30,000 prize and project)",
+        "url": "https://minimax-agent-hackathon.space.minimax.io/",
+        "kind": "website",
+        "excerpt": "Grand Prize $30,000 — “Turn any AI news to social media post”."
+      },
+      {
+        "label": "MiniMax news: Challenge announcement ($150,000 prize pool, Aug 11, 2025)",
+        "url": "https://www.minimax.io/news/minimax-150000-ai-agent-challenge",
+        "kind": "article",
+        "excerpt": "MiniMax AI Agent Challenge — with $150,000 in prizes up for grabs."
+      }
+    ],
+    "status": "verified"
+  },
+  {
     "id": "2025-08-08-darpa-aixcc-prize-winners",
     "date": "2025-08-08",
     "title": "DARPA AI Cyber Challenge: autonomous cyber reasoning systems win $4M / $3M / $1.5M",
@@ -90,6 +149,86 @@
     "status": "verified"
   },
   {
+    "id": "2025-05-20-agentforce-hackathon-onepathai-20000",
+    "date": "2025-05-20",
+    "title": "OnePath AI: incident-response agent wins $20,000 in Salesforce Agentforce Virtual Hackathon",
+    "summary": "OnePath AI (an Agentforce + Slack incident-response automation agent) is listed as a Winner for “Honorable Mention: Best Demo Delivery” in the Agentforce Virtual Hackathon.",
+    "description": "Salesforce’s Agentforce Virtual Hackathon awarded multiple cash prizes for AI agents built on Agentforce. OnePath AI’s Devpost project page shows it as a Winner in the “Honorable Mention: Best Demo Delivery” category.\n\nThe hackathon’s official Devpost page publicly lists that the “Honorable Mention: Best Demo Delivery” award is $20,000 in cash. This is a verifiable example of an AI agent system making money via a competition payout.",
+    "profitMechanisms": [
+      "Hackathon cash prize payout ($20,000) for an Agentforce agent",
+      "Enterprise automation agent that can be monetized via services and productization"
+    ],
+    "tags": ["hackathons", "prizes", "agents", "enterprise", "incident-response", "slack", "salesforce"],
+    "proofSources": [
+      {
+        "label": "Agentforce Virtual Hackathon (Devpost): prize list showing $20,000 for Best Demo Delivery",
+        "url": "https://agentforcehackathon.devpost.com/",
+        "kind": "website",
+        "excerpt": "Honorable Mention: Best Demo Delivery — $20,000 in cash."
+      },
+      {
+        "label": "OnePath AI Devpost submission (marked as Winner: Honorable Mention: Best Demo Delivery)",
+        "url": "https://devpost.com/software/onepath-ai",
+        "kind": "website",
+        "excerpt": "Submitted to Agentforce Virtual Hackathon — Winner: Honorable Mention: Best Demo Delivery."
+      }
+    ],
+    "status": "verified"
+  },
+  {
+    "id": "2025-04-30-microsoft-ai-agents-hackathon-riskwise-20000",
+    "date": "2025-04-30",
+    "title": "RiskWise: supply-chain analysis agent wins $20,000 “Best Overall” in Microsoft AI Agents Hackathon",
+    "summary": "Microsoft’s AI Agents Hackathon announced a $20,000 “Best Overall Agent” prize; the official winners showcase lists RiskWise as the Best Overall winner.",
+    "description": "Microsoft ran the AI Agents Hackathon (April 8–30, 2025) with cash prizes by category, including a $20,000 “Best Overall Agent” prize.\n\nThe hackathon winners showcase highlights RiskWise as the Best Overall winner. This is a direct example of an agentic application making money via a public hackathon award.",
+    "profitMechanisms": [
+      "Hackathon cash prize payout ($20,000) for an agentic application",
+      "Enterprise agent product potential (analytics + decision support)"
+    ],
+    "tags": ["hackathons", "prizes", "agents", "enterprise", "analytics", "multi-step"],
+    "proofSources": [
+      {
+        "label": "Microsoft Tech Community: AI Agents Hackathon prize list (Mar 20, 2025)",
+        "url": "https://techcommunity.microsoft.com/blog/azuredevcommunityblog/microsoft-ai-agents-hack-april-8-30th-2025/4395595",
+        "kind": "article",
+        "excerpt": "Best Overall Agent - $20,000 (plus $5,000 prizes for category winners)."
+      },
+      {
+        "label": "Microsoft AI Agents Hackathon winners showcase (RiskWise listed as Best Overall winner)",
+        "url": "https://microsoft.github.io/AI_Agents_Hackathon/winners/",
+        "kind": "website"
+      }
+    ],
+    "status": "verified"
+  },
+  {
+    "id": "2025-04-24-readytensor-agentic-ai-challenge-agentconnect-750",
+    "date": "2025-04-24",
+    "title": "AgentConnect: autonomous agent framework wins $750 in Ready Tensor Agentic AI Innovation Challenge 2025",
+    "summary": "Ready Tensor’s winners announcement lists AgentConnect as a Best Overall Project winner, with a $750 prize per team.",
+    "description": "Ready Tensor’s Agentic AI Innovation Challenge 2025 awarded cash prizes to multiple agentic projects. In the winners announcement, AgentConnect is listed under “Best Overall Project” with a $750 prize per team.\n\nThis is a direct, public example of an agentic system making money via a competition award with publicly listed winners and prize amounts.",
+    "profitMechanisms": [
+      "Competition cash prize payout ($750) for an agentic project",
+      "Potential monetization by offering the agent framework as software/services"
+    ],
+    "tags": ["competitions", "prizes", "agents", "frameworks", "tool-use"],
+    "proofSources": [
+      {
+        "label": "Ready Tensor: Winners announcement (AgentConnect listed; $750 prize per team)",
+        "url": "https://www.readytensor.ai/agentic-ai-2025-winners/",
+        "kind": "article",
+        "excerpt": "Best Overall Project - 2 winners - $750 prize per team (AgentConnect listed as a winner)."
+      },
+      {
+        "label": "Ready Tensor: Competition info (timeline + $10,000 total prize pool)",
+        "url": "https://www.readytensor.ai/agentic-ai-2025/",
+        "kind": "website",
+        "excerpt": "The total prize pool across all categories is $10,000."
+      }
+    ],
+    "status": "verified"
+  },
+  {
     "id": "2025-01-22-agenthunter-5120-mrr-30-days",
     "date": "2025-01-22",
     "title": "AgentHunter.io: AI agent discovery platform reports $5,120 MRR in 30 days",
@@ -114,7 +253,7 @@
         "excerpt": "Archive link for the public claim of “$5,120 MRR”."
       }
     ],
-    "status": "unverified"
+    "status": "speculation"
   },
   {
     "id": "2024-08-11-darpa-aixcc-semifinals-2m-each",

@@ -6,7 +6,7 @@ import MoneyText from "@/components/MoneyText";
 
 type SortKey = "date" | "title" | "status";
 type SortDir = "asc" | "desc";
-type StatusFilter = "all" | "verified" | "unverified";
+type StatusFilter = "all" | "verified" | "speculation";
 
 function compareNullable(a: string | undefined, b: string | undefined) {
   return (a ?? "").localeCompare(b ?? "", undefined, { sensitivity: "base" });
@@ -54,7 +54,7 @@ export default function CaseStudiesTable({
   const filteredAndSorted = useMemo(() => {
     const normalized = caseStudies.map((cs) => ({
       ...cs,
-      status: cs.status ?? "unverified",
+      status: cs.status ?? "speculation",
     }));
     const filtered =
       statusFilter === "all"
@@ -113,7 +113,7 @@ export default function CaseStudiesTable({
           >
             <option value="all">All</option>
             <option value="verified">Verified</option>
-            <option value="unverified">Unverified</option>
+            <option value="speculation">Speculation</option>
           </select>
         </label>
       </div>
@@ -126,7 +126,7 @@ export default function CaseStudiesTable({
                 {/* expand */}
               </th>
               <th
-                className="cursor-pointer select-none border-b border-zinc-200 px-4 py-3 dark:border-zinc-800"
+                className="cursor-pointer select-none whitespace-nowrap border-b border-zinc-200 px-4 py-3 dark:border-zinc-800"
                 onClick={() => toggleSort("date")}
               >
                 Date {sortKey === "date" ? (sortDir === "asc" ? "↑" : "↓") : ""}
@@ -162,7 +162,7 @@ export default function CaseStudiesTable({
                     <td className="border-b border-zinc-200 px-4 py-3 text-zinc-500 dark:border-zinc-800 dark:text-zinc-400">
                       <span className="font-mono">{expanded ? "−" : "+"}</span>
                     </td>
-                    <td className="border-b border-zinc-200 px-4 py-3 font-mono text-xs text-zinc-600 dark:border-zinc-800 dark:text-zinc-400">
+                    <td className="min-w-[110px] whitespace-nowrap border-b border-zinc-200 px-4 py-3 font-mono text-xs text-zinc-600 dark:border-zinc-800 dark:text-zinc-400">
                       {cs.date}
                     </td>
                     <td className="border-b border-zinc-200 px-4 py-3 dark:border-zinc-800">
@@ -185,8 +185,8 @@ export default function CaseStudiesTable({
                       )}
                     </td>
                     <td className="border-b border-zinc-200 px-4 py-3 dark:border-zinc-800">
-                      <span className={statusPillClasses(cs.status ?? "unverified")}>
-                        {cs.status ?? "unverified"}
+                      <span className={statusPillClasses(cs.status ?? "speculation")}>
+                        {cs.status ?? "speculation"}
                       </span>
                     </td>
                   </tr>

@@ -13,7 +13,7 @@ AgentProfit.ai only lists **AI agents making money or profit**, backed by **publ
 - **Title must include `$`**: every case study title must contain a dollar amount.
 - **Status**:
   - `verified`: money/profit amount is supported by public sources.
-  - `unverified`: only allowed if the source is public but weak (e.g., self-reported post without primary evidence) and the description explicitly states the proof gap.
+  - `speculation`: only allowed if the source is public but weak (e.g., self-reported post without primary evidence) and the description explicitly states the proof gap.
 
 ### Not allowed
 
