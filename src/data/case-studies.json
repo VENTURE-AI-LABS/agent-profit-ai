@@ -1,0 +1,35 @@
+[
+  {
+    "id": "2025-06-11-bountybench-bug-bounty-agents",
+    "date": "2025-06-11",
+    "title": "BountyBench: agents complete $47,821 in patch bounty value (benchmark)",
+    "summary": "A Stanford-led benchmark maps agent success on real bug-bounty tasks to published bounty award amounts, showing substantial \"bounty total\" value for patching.",
+    "description": "BountyBench is a cybersecurity benchmark built from real-world bug bounty reports across 25 open-source systems. It defines agent tasks that mirror the bug bounty lifecycle: Detect (find a new vulnerability), Exploit (reproduce a known vulnerability), and Patch (fix a vulnerability).\n\nThe benchmark assigns each task a real dollar award amount based on publicly reported bug bounty payouts, then reports \"bounty total\" as the sum of awards for tasks an agent completes successfully.\n\nImportant: this is a benchmark-based economic mapping (not a claim that money was paid directly to an agent). The case study is still useful because it documents a concrete, repeatable way AI agents can create economic value in the bug bounty ecosystem: finding, exploiting, and especially patching security issues that have known payout structures.",
+    "profitMechanisms": [
+      "Bug bounty payouts for vulnerability discovery (Detect) and fixes (Patch)",
+      "Security remediation work valued by published bounty award amounts"
+    ],
+    "tags": ["cybersecurity", "bug-bounty", "agentic-coding", "patching"],
+    "proofSources": [
+      {
+        "label": "Stanford AI Lab blog post (June 11, 2025)",
+        "url": "https://ai.stanford.edu/blog/bountybench/",
+        "kind": "article",
+        "excerpt": "Agents complete $47,821 worth of Patch tasks and $5,855 worth of Detect tasks."
+      },
+      {
+        "label": "BountyBench site (paper, code, and leaderboard)",
+        "url": "https://bountybench.github.io/",
+        "kind": "website"
+      },
+      {
+        "label": "BountyBench paper PDF (NeurIPS 2025 Datasets and Benchmarks track)",
+        "url": "https://openreview.net/pdf/2f3ad8c938103ee525ed5155ac0634c41849aeb7.pdf",
+        "kind": "paper",
+        "excerpt": "Bug bounties with monetary awards of $10-$30,485 ... Patch mapping to $14,152 / $14,422 for top agents (per paper)."
+      }
+    ],
+    "status": "verified"
+  }
+]
+
