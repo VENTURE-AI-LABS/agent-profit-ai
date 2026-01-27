@@ -12,7 +12,7 @@ export default function Home() {
         <header className="grid gap-6 lg:grid-cols-[1fr_560px] lg:items-start">
           <div className="flex flex-col gap-4">
             <div className="flex flex-col gap-2">
-              <div className="text-4xl font-black tracking-tight sm:text-5xl">
+              <div className="text-4xl font-black tracking-tight text-emerald-700 dark:text-emerald-400 sm:text-5xl">
                 AgentProfit.ai
               </div>
               <h1 className="text-2xl font-semibold tracking-tight text-zinc-800 dark:text-zinc-100 sm:text-3xl">
@@ -70,7 +70,7 @@ export default function Home() {
             </div>
             <div className="mt-2 space-y-3 leading-6">
               <p>
-                <span className="font-semibold text-zinc-900 dark:text-zinc-50">
+                <span className="font-semibold text-emerald-700 dark:text-emerald-400">
                   AgentProfit.ai
                 </span>{" "}
                 catalogs real-world, publicly verifiable case studies of{" "}
@@ -113,7 +113,10 @@ export default function Home() {
 
         <footer className="border-t border-zinc-200 pt-8 text-xs text-zinc-500 dark:border-zinc-800 dark:text-zinc-400">
           <div>
-            AgentProfit.ai — documenting real-world AI agent profit mechanisms.
+            <span className="font-semibold text-emerald-700 dark:text-emerald-400">
+              AgentProfit.ai
+            </span>{" "}
+            — documenting real-world AI agent profit mechanisms.
           </div>
           <div className="mt-2">
             NFA disclaimer: informational only; no solicitation; no investment

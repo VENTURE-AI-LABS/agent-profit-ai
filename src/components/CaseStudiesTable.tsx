@@ -8,6 +8,26 @@ type SortKey = "date" | "title" | "status";
 type SortDir = "asc" | "desc";
 type StatusFilter = "all" | "verified" | "speculation";
 
+function daysFromTodayIso(dateIso: string) {
+  // Treat YYYY-MM-DD as UTC midnight to avoid TZ surprises.
+  const d = new Date(`${dateIso}T00:00:00Z`);
+  const now = new Date();
+  const todayUtc = new Date(
+    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()),
+  );
+  return Math.floor((todayUtc.getTime() - d.getTime()) / 86_400_000);
+}
+
+function formatDaysAgo(dateIso: string) {
+  const days = daysFromTodayIso(dateIso);
+  if (days === 0) return "today";
+  if (days === 1) return "1 day ago";
+  if (days > 1) return `${days} days ago`;
+  const ahead = Math.abs(days);
+  if (ahead === 1) return "in 1 day";
+  return `in ${ahead} days`;
+}
+
 function compareNullable(a: string | undefined, b: string | undefined) {
   return (a ?? "").localeCompare(b ?? "", undefined, { sensitivity: "base" });
 }
@@ -162,8 +182,13 @@ export default function CaseStudiesTable({
                     <td className="border-b border-zinc-200 px-4 py-3 text-zinc-500 dark:border-zinc-800 dark:text-zinc-400">
                       <span className="font-mono">{expanded ? "−" : "+"}</span>
                     </td>
-                    <td className="min-w-[110px] whitespace-nowrap border-b border-zinc-200 px-4 py-3 font-mono text-xs text-zinc-600 dark:border-zinc-800 dark:text-zinc-400">
-                      {cs.date}
+                    <td className="min-w-[110px] border-b border-zinc-200 px-4 py-3 text-zinc-600 dark:border-zinc-800 dark:text-zinc-400">
+                      <div className="whitespace-nowrap font-mono text-xs">
+                        {cs.date}
+                      </div>
+                      <div className="mt-1 whitespace-nowrap text-[11px]">
+                        ({formatDaysAgo(cs.date)})
+                      </div>
                     </td>
                     <td className="border-b border-zinc-200 px-4 py-3 dark:border-zinc-800">
                       <div className="text-base font-semibold leading-6">
