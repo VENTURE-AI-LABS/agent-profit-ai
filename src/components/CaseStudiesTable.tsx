@@ -6,6 +6,7 @@ import MoneyText from "@/components/MoneyText";
 
 type SortKey = "date" | "title" | "status";
 type SortDir = "asc" | "desc";
+type StatusFilter = "all" | "verified" | "unverified";
 
 function compareNullable(a: string | undefined, b: string | undefined) {
   return (a ?? "").localeCompare(b ?? "", undefined, { sensitivity: "base" });
@@ -31,6 +32,15 @@ function pillClasses() {
   return "inline-flex items-center rounded-full border border-zinc-200 bg-white px-2 py-0.5 text-xs text-zinc-700 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200";
 }
 
+function statusPillClasses(status: string) {
+  const base =
+    "inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold";
+  if (status === "verified") {
+    return `${base} border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-900/60 dark:bg-emerald-950/40 dark:text-emerald-300`;
+  }
+  return `${base} border-orange-200 bg-orange-50 text-orange-800 dark:border-orange-900/60 dark:bg-orange-950/40 dark:text-orange-300`;
+}
+
 export default function CaseStudiesTable({
   caseStudies,
 }: {
@@ -38,12 +48,20 @@ export default function CaseStudiesTable({
 }) {
   const [sortKey, setSortKey] = useState<SortKey>("date");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [expandedIds, setExpandedIds] = useState<Record<string, boolean>>({});
 
-  const sorted = useMemo(
-    () => sortCaseStudies(caseStudies, sortKey, sortDir),
-    [caseStudies, sortKey, sortDir],
-  );
+  const filteredAndSorted = useMemo(() => {
+    const normalized = caseStudies.map((cs) => ({
+      ...cs,
+      status: cs.status ?? "unverified",
+    }));
+    const filtered =
+      statusFilter === "all"
+        ? normalized
+        : normalized.filter((cs) => cs.status === statusFilter);
+    return sortCaseStudies(filtered, sortKey, sortDir);
+  }, [caseStudies, sortKey, sortDir, statusFilter]);
 
   function toggleSort(key: SortKey) {
     if (key === sortKey) {
@@ -74,6 +92,32 @@ export default function CaseStudiesTable({
 
   return (
     <div className="overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+      <div className="flex flex-col gap-3 border-b border-zinc-200 px-4 py-3 dark:border-zinc-800 sm:flex-row sm:items-center sm:justify-between">
+        <div className="text-sm text-zinc-600 dark:text-zinc-400">
+          Showing{" "}
+          <span className="font-semibold text-zinc-900 dark:text-zinc-50">
+            {filteredAndSorted.length}
+          </span>{" "}
+          of{" "}
+          <span className="font-semibold text-zinc-900 dark:text-zinc-50">
+            {caseStudies.length}
+          </span>
+        </div>
+
+        <label className="flex items-center gap-2 text-sm text-zinc-700 dark:text-zinc-300">
+          <span className="font-medium">Status</span>
+          <select
+            className="rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 shadow-sm outline-none transition focus:border-zinc-400 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-50 dark:focus:border-zinc-600"
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
+          >
+            <option value="all">All</option>
+            <option value="verified">Verified</option>
+            <option value="unverified">Unverified</option>
+          </select>
+        </label>
+      </div>
+
       <div className="overflow-x-auto">
         <table className="w-full min-w-[720px] border-separate border-spacing-0">
           <thead>
@@ -107,7 +151,7 @@ export default function CaseStudiesTable({
             </tr>
           </thead>
           <tbody>
-            {sorted.map((cs) => {
+            {filteredAndSorted.map((cs) => {
               const expanded = !!expandedIds[cs.id];
               return (
                 <Fragment key={cs.id}>
@@ -137,7 +181,7 @@ export default function CaseStudiesTable({
                       <MoneyText text={cs.summary} />
                     </td>
                     <td className="border-b border-zinc-200 px-4 py-3 dark:border-zinc-800">
-                      <span className={pillClasses()}>
+                      <span className={statusPillClasses(cs.status ?? "unverified")}>
                         {cs.status ?? "unverified"}
                       </span>
                     </td>

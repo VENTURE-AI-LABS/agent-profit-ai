@@ -27,6 +27,15 @@ function isUrl(v) {
   }
 }
 
+function containsDollarAmount(s) {
+  return typeof s === "string" && /\$\d/.test(s);
+}
+
+function containsFundingLanguage(s) {
+  if (typeof s !== "string") return false;
+  return /\b(seed|series\s+[a-z]|funding|raise[sd]?|valuation|round)\b/i.test(s);
+}
+
 const raw = fs.readFileSync(DATA_PATH, "utf8");
 let data;
 try {
@@ -59,6 +68,16 @@ for (let i = 0; i < data.length; i++) {
   if (!isNonEmptyString(cs.summary)) fail(`${at}.summary is required.`);
   if (!isNonEmptyString(cs.description)) fail(`${at}.description is required.`);
 
+  // Strict rules: titles must include a $ amount and must not use funding rounds as "making money".
+  if (isNonEmptyString(cs.title) && !containsDollarAmount(cs.title)) {
+    fail(`${at}.title must include a $ amount.`);
+  }
+  if (containsFundingLanguage(cs.title) || containsFundingLanguage(cs.summary)) {
+    fail(
+      `${at} appears to be fundraising-based (seed/series/raise). Funding rounds are not allowed as "making money".`,
+    );
+  }
+
   if (!Array.isArray(cs.profitMechanisms))
     fail(`${at}.profitMechanisms must be an array.`);
   if (!Array.isArray(cs.tags)) fail(`${at}.tags must be an array.`);
@@ -66,6 +85,11 @@ for (let i = 0; i < data.length; i++) {
   if (!Array.isArray(cs.proofSources)) {
     fail(`${at}.proofSources must be an array.`);
   } else {
+    if (cs.proofSources.length < 2) {
+      fail(`${at}.proofSources must include at least 2 sources.`);
+    }
+
+    let hasMoneyExcerpt = false;
     for (let j = 0; j < cs.proofSources.length; j++) {
       const s = cs.proofSources[j];
       const sat = `${at}.proofSources[${j}]`;
@@ -76,6 +100,14 @@ for (let i = 0; i < data.length; i++) {
       if (!isNonEmptyString(s.label)) fail(`${sat}.label is required.`);
       if (!isNonEmptyString(s.url) || !isUrl(s.url))
         fail(`${sat}.url must be a valid URL.`);
+
+      if (containsDollarAmount(s.excerpt)) hasMoneyExcerpt = true;
+    }
+
+    if (!hasMoneyExcerpt) {
+      fail(
+        `${at} must include at least one proofSources[].excerpt containing the $ amount.`,
+      );
     }
   }
 }

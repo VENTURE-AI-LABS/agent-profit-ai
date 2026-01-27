@@ -19,9 +19,15 @@ A case study should document an **AI agent** (autonomous or semi-autonomous work
 - Has **public evidence** supporting the claim (links required)
 - Has a clear **how it works** description a reader can understand and replicate at a high level
 
+### Strict exclusions
+
+- **Do not add funding rounds** (seed/Series A/B/etc) as “making money.” Fundraising is not revenue/profit.
+- Do not add entries that only show “rank/users/traffic” without a publicly verifiable money/profit amount.
+
 ## Proof standard (required)
 
-Each entry must include **2+** proof sources in `proofSources`, at least one of which is a **primary source** when possible:
+Each entry must include **2+** proof sources in `proofSources`, at least one of which is a **primary source** when possible.
+At least one proof source should contain an **excerpt with the $ amount** (or a direct quote describing the payout/revenue).
 
 - **Primary**: official dashboards, on-chain addresses, product pricing + live customer proof, public invoices/receipts, public revenue screenshots from the operator, public repos showing monetized automation + claims
 - **Secondary**: reputable articles summarizing the primary source

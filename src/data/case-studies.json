@@ -58,33 +58,6 @@
     "status": "verified"
   },
   {
-    "id": "2025-06-24-xbow-hackerone-top-1",
-    "date": "2025-06-24",
-    "title": "XBOW: autonomous pentesting agent reaches #1 on HackerOne US leaderboard",
-    "summary": "XBOW reports its autonomous pentesting system climbed to #1 on the HackerOne US leaderboard after submitting ~1,060 vulnerability reports across bounty programs.",
-    "description": "XBOW describes “dogfooding” their autonomous pentesting agent in public and private bug bounty programs on HackerOne, then climbing to the #1 US leaderboard rank. They report submitting nearly 1,060 vulnerability reports, spanning many vulnerability classes.\n\nThis represents a real-world, production-environment path to revenue: automated vulnerability discovery + responsible submission into paid bug bounty ecosystems. Note: the public posts/leaderboard demonstrate activity and rank; they do not enumerate specific bounty payouts tied to individual reports in the sources below.",
-    "profitMechanisms": [
-      "Bug bounty payouts for valid vulnerability reports (program-dependent)",
-      "Enterprise pentesting product revenue (B2B) from an autonomous pentesting agent"
-    ],
-    "tags": ["cybersecurity", "bug-bounty", "pentesting", "hackerone", "autonomous-agent"],
-    "proofSources": [
-      {
-        "label": "XBOW: The road to Top 1 (June 24, 2025)",
-        "url": "https://xbow.com/blog/top-1-how-xbow-did-it/",
-        "kind": "article",
-        "excerpt": "“XBOW submitted nearly 1,060 vulnerabilities.”"
-      },
-      {
-        "label": "XBOW: XBOW on HackerOne: What’s Next (Aug 18, 2025)",
-        "url": "https://xbow.com/blog/xbow-on-hackerone-whats-next",
-        "kind": "article",
-        "excerpt": "Claims reaching #1 on HackerOne leaderboards and describes validating/triaging workflow."
-      }
-    ],
-    "status": "unverified"
-  },
-  {
     "id": "2025-06-11-bountybench-bug-bounty-agents",
     "date": "2025-06-11",
     "title": "BountyBench: agents complete $47,821 in patch bounty value (benchmark)",
@@ -133,9 +106,42 @@
         "url": "https://www.orris.ai/blog/scaling-agenthunter-to-5k-mrr",
         "kind": "article",
         "excerpt": "Reports “$5,120 MRR” and “$2,000” total marketing spend."
+      },
+      {
+        "label": "Archived copy of the same write-up (for durability)",
+        "url": "https://web.archive.org/web/20250101*/https://www.orris.ai/blog/scaling-agenthunter-to-5k-mrr",
+        "kind": "website",
+        "excerpt": "Archive link for the public claim of “$5,120 MRR”."
       }
     ],
     "status": "unverified"
+  },
+  {
+    "id": "2024-08-11-darpa-aixcc-semifinals-2m-each",
+    "date": "2024-08-11",
+    "title": "DARPA AIxCC Semifinals: top seven teams awarded $2 million each",
+    "summary": "DARPA reports the top seven AI cyber reasoning systems teams were awarded $2 million each to advance to the Final Competition.",
+    "description": "DARPA’s AI Cyber Challenge (AIxCC) Semifinal Competition concluded at DEF CON 32. DARPA publicly states that the top seven scoring teams will be awarded $2 million each and advance to the Final Competition.\n\nThis is a direct, verifiable example of AI agent systems earning money via competition awards for autonomous vulnerability discovery and patching capabilities.",
+    "profitMechanisms": [
+      "Competition awards: $2 million cash prize per top team at semifinals",
+      "Building autonomous cyber reasoning systems that find and patch vulnerabilities"
+    ],
+    "tags": ["cybersecurity", "competitions", "prizes", "patching", "autonomy"],
+    "proofSources": [
+      {
+        "label": "DARPA: AI Cyber Challenge Proves Promise of AI-Driven Cybersecurity (Aug 11, 2024)",
+        "url": "https://www.darpa.mil/news/2024/ai-cyber-challenge-cybersecurity",
+        "kind": "article",
+        "excerpt": "“The top seven scoring teams that will be awarded $2 million each and advance to the Final Competition are…”"
+      },
+      {
+        "label": "AIxCC Semifinal Competition page (award amounts and teams listed)",
+        "url": "https://aicyberchallenge.com/semifinal-competition/",
+        "kind": "website",
+        "excerpt": "“The top seven (7) scoring teams at ASC received $2 million each and will compete in the Final Competition.”"
+      }
+    ],
+    "status": "verified"
   }
 ]
 

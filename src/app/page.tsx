@@ -21,18 +21,18 @@ export default function Home() {
             </div>
           </div>
 
-          <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-            <div className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">
+          <div className="rounded-2xl border border-blue-900/50 bg-blue-950 p-4 shadow-sm">
+            <div className="text-sm font-semibold text-white">
               Weekly digest
             </div>
-            <div className="mt-1 text-xs leading-5 text-zinc-600 dark:text-zinc-400">
-              Get the newest case studies every week.
+            <div className="mt-1 text-xs leading-5 text-blue-100/80">
+              Get the newest case studies every week - learn how AI Agents are making profits!.
             </div>
             <div className="mt-3">
-              <NewsletterForm variant="compact" />
+              <NewsletterForm variant="compact" tone="onDark" />
             </div>
             <a
-              className="mt-3 inline-flex text-xs font-medium text-zinc-600 underline-offset-2 hover:underline dark:text-zinc-400"
+              className="mt-3 inline-flex text-xs font-medium text-blue-100/80 underline-offset-2 hover:underline"
               href="#newsletter"
             >
               Prefer the full signup section ↓
@@ -102,17 +102,17 @@ export default function Home() {
 
         <section
           id="newsletter"
-          className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900"
+          className="rounded-2xl border border-blue-900/50 bg-blue-950 p-6 shadow-sm"
         >
-          <h2 className="text-xl font-semibold tracking-tight">
+          <h2 className="text-xl font-semibold tracking-tight text-white">
             Weekly digest
           </h2>
-          <p className="mt-1 max-w-2xl text-sm leading-6 text-zinc-600 dark:text-zinc-400">
+          <p className="mt-1 max-w-2xl text-sm leading-6 text-blue-100/80">
             Subscribe to receive a weekly email with the newest, most compelling
             case studies.
           </p>
           <div className="mt-4">
-            <NewsletterForm />
+            <NewsletterForm tone="onDark" />
           </div>
         </section>
 
