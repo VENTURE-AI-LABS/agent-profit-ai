@@ -144,9 +144,13 @@ async function writeJsonFile(p: string, value: unknown) {
 async function callPerplexity({
   apiKey,
   query,
+  recency,
+  numSearchResults,
 }: {
   apiKey: string;
   query: string;
+  recency: "day" | "week" | "month" | "year";
+  numSearchResults: number;
 }): Promise<{
   model?: string;
   content: string;
@@ -166,8 +170,8 @@ async function callPerplexity({
       temperature: 0.2,
       max_tokens: 1400,
       web_search_options: {
-        search_recency_filter: "week",
-        num_search_results: 20,
+        search_recency_filter: recency,
+        num_search_results: numSearchResults,
         safe_search: true,
       },
       messages: [
@@ -320,15 +324,26 @@ export async function runWeeklyUpdate(req: Request, opts: WeeklyUpdateOptions = 
   const force = (url.searchParams.get("force") ?? "") === "1";
   const limit = Math.max(1, Math.min(25, Number(url.searchParams.get("searchLimit") ?? "20") || 20));
   const find = Math.max(1, Math.min(10, Number(url.searchParams.get("find") ?? url.searchParams.get("maxNew") ?? "10") || 10));
+  const recencyParam = (url.searchParams.get("recency") ?? "week").toLowerCase();
+  const recency = (["day", "week", "month", "year"] as const).includes(recencyParam as any)
+    ? (recencyParam as "day" | "week" | "month" | "year")
+    : "week";
+  const queryParam = url.searchParams.get("query") ?? url.searchParams.get("q") ?? "";
 
   const runDate = todayIso();
   const runId = `${runDate}T${new Date().toISOString().slice(11, 19).replaceAll(":", "-")}Z`;
 
   try {
     const query =
+      (queryParam || "").trim().slice(0, 600) ||
       "Find AI agents or agentic workflows that made money in the last 7 days. Only include items with explicit dollar amounts (e.g., prizes, bounties, revenue/MRR) and public sources.";
 
-    const p = await callPerplexity({ apiKey: perplexityKey, query });
+    const p = await callPerplexity({
+      apiKey: perplexityKey,
+      query,
+      recency,
+      numSearchResults: Math.max(10, limit),
+    });
 
     const sources = (Array.isArray(p.searchResults) ? p.searchResults : [])
       .map((r) => ({
