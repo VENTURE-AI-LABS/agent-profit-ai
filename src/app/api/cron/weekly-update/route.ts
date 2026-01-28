@@ -59,6 +59,33 @@ function isHttpUrl(url: string) {
   return /^https?:\/\//i.test(url);
 }
 
+const SOCIAL_HOSTS = new Set([
+  "facebook.com",
+  "x.com",
+  "twitter.com",
+  "linkedin.com",
+  "reddit.com",
+  "tiktok.com",
+  "instagram.com",
+  "discord.com",
+  "t.me",
+  "telegram.me",
+]);
+
+function isSocialUrl(url: string) {
+  try {
+    const u = new URL(url);
+    const host = u.hostname.toLowerCase();
+    if (SOCIAL_HOSTS.has(host)) return true;
+    for (const h of SOCIAL_HOSTS) {
+      if (host.endsWith(`.${h}`)) return true;
+    }
+    return false;
+  } catch {
+    return false;
+  }
+}
+
 function hasDollarAmount(s: string) {
   return /\$\s?\d[\d,]*(\.\d+)?/g.test(s);
 }
@@ -97,11 +124,16 @@ function normalizeCaseStudyCandidate({
     }))
     .filter((s) => s.label && s.url && isHttpUrl(s.url) && allowedUrls.has(s.url));
 
-  const status = obj.status === "verified" || obj.status === "speculation" ? obj.status : "speculation";
+  let status = obj.status === "verified" || obj.status === "speculation" ? obj.status : "speculation";
 
   if (!title || !summary || !description) return null;
   if (!title.includes("$")) return null;
-  if (proofSources.length < 2) return null;
+  // Allow 1-source speculation, but require 2+ sources for verified.
+  if (status === "verified" && proofSources.length < 2) status = "speculation";
+  if (proofSources.length < 1) return null;
+  // Disallow social-only sources (speculation still needs a non-social URL).
+  const nonSocial = proofSources.filter((s) => !isSocialUrl(s.url));
+  if (nonSocial.length < 1) return null;
   if (!proofSources.some((s) => (s.excerpt ? hasDollarAmount(s.excerpt) : false))) return null;
 
   let id = typeof obj.id === "string" ? obj.id.trim() : "";
@@ -221,11 +253,13 @@ async function callClaudeHaiku({
     "- Output must be a single JSON array ONLY (no markdown, no prose).",
     "- Each entry MUST describe an AI agent or agentic workflow making money/profit with a specific $ amount.",
     "- EXCLUDE fundraising/valuations/grants; those do NOT count as 'making money'.",
-    "- Each entry MUST have 2+ proofSources.",
+    "- Prefer VERIFIED entries with 2+ proofSources.",
+    "- Speculation entries may have 1 proofSource (only if you cannot find a second credible source).",
     "- Every proofSources.url MUST be taken EXACTLY from the provided sources list (do not invent links).",
     "- At least one proofSources.excerpt MUST contain the $ amount and MUST be copied verbatim from a provided snippet (no paraphrasing in excerpts).",
     "- Title MUST include a $ amount (include '$' character).",
     "- If the sources/snippets are too thin to be confident, set status to 'speculation' and explicitly state the proof gap in the description.",
+    "- Do NOT use social media links (e.g. X/Twitter, Facebook, LinkedIn, Reddit, TikTok, Instagram, Discord, Telegram) as the only proof source.",
     "",
     "CaseStudy schema:",
     "{ id, date(YYYY-MM-DD), title, summary, description, profitMechanisms[], tags[], proofSources[{label,url,kind?,excerpt?}], status('verified'|'speculation') }",
@@ -389,8 +423,14 @@ export async function runWeeklyUpdate(req: Request, opts: WeeklyUpdateOptions = 
     const existingIds = new Set(existing.map((x) => x.id));
     const existingUrls = new Set(existing.flatMap((x) => (x.proofSources ?? []).map((s) => s.url)));
 
+    const candidateRank = (x: unknown) => {
+      const s = (x as any)?.status;
+      return s === "verified" ? 0 : 1;
+    };
+    const orderedCandidates = claudeCandidates.slice().sort((a, b) => candidateRank(a) - candidateRank(b));
+
     const added: CaseStudy[] = [];
-    for (const cand of claudeCandidates) {
+    for (const cand of orderedCandidates) {
       if (added.length >= find) break;
       const cs = normalizeCaseStudyCandidate({
         cs: cand,

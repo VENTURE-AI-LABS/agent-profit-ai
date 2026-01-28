@@ -38,7 +38,10 @@ function sortCaseStudies(items: CaseStudy[], key: SortKey, dir: SortDir) {
   const copy = [...items];
   copy.sort((a, b) => {
     if (key === "date") {
-      // ISO YYYY-MM-DD sorts lexicographically.
+      // Prefer verified first, then ISO date (YYYY-MM-DD sorts lexicographically).
+      const ar = (a.status ?? "speculation") === "verified" ? 0 : 1;
+      const br = (b.status ?? "speculation") === "verified" ? 0 : 1;
+      if (ar !== br) return ar - br;
       return mul * a.date.localeCompare(b.date);
     }
     if (key === "title") {

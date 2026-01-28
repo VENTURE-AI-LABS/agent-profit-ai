@@ -53,7 +53,7 @@ export default async function Home() {
                 Case studies
               </h2>
               <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-                Sorted by newest first by default. Click a row to see full details
+                Verified entries are prioritized. Click a row to see full details
                 of the case study including sources.
               </p>
             </div>
