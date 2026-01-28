@@ -1,5 +1,5 @@
 import type { CaseStudy } from "@/lib/types";
-import { head, put } from "@vercel/blob";
+import { list, put } from "@vercel/blob";
 
 type LiveManifestV1 = {
   version: 1;
@@ -10,19 +10,20 @@ type LiveManifestV1 = {
   addedIds?: string[];
 };
 
-const LIVE_MANIFEST_PATH = "case-studies/live-manifest.json";
+const LIVE_MANIFEST_PREFIX = "case-studies/live-manifest/";
 
-async function resolvePublicUrl(pathname: string) {
-  // Preferred: resolve the current blob URL from a pathname via the SDK.
-  // This works even if the blob was overwritten at the same pathname.
-  try {
-    const meta = await head(pathname);
-    return meta.url;
-  } catch {
-    // Fallback: best-effort public base URL (useful for local/dev).
-    const base = (process.env.VERCEL_BLOB_BASE_URL ?? "").replace(/\/+$/, "");
-    return base ? `${base}/${pathname}` : "";
-  }
+async function getLatestManifestUrl(): Promise<string> {
+  const res = await list({ prefix: LIVE_MANIFEST_PREFIX, limit: 1000 });
+  const blobs = Array.isArray(res.blobs) ? res.blobs : [];
+  const latest = blobs.reduce<{ pathname: string; url: string } | null>((acc, b) => {
+    const pathname = String((b as any)?.pathname ?? "");
+    const url = String((b as any)?.url ?? "");
+    if (!pathname || !url) return acc;
+    // Our runId is sortable lexicographically. Pick max pathname.
+    if (!acc) return { pathname, url };
+    return pathname > acc.pathname ? { pathname, url } : acc;
+  }, null);
+  return latest?.url ?? "";
 }
 
 async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
@@ -35,11 +36,11 @@ async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
 }
 
 export async function readLiveManifestFromBlob(): Promise<LiveManifestV1 | null> {
-  const url = await resolvePublicUrl(LIVE_MANIFEST_PATH);
+  const url = await getLatestManifestUrl();
   if (!url) return null;
   try {
-    // Manifest is the pointer, so fetch it fresh.
-    return await fetchJson<LiveManifestV1>(url, { cache: "no-store" });
+    // Versioned manifest is immutable; safe to cache.
+    return await fetchJson<LiveManifestV1>(url, { cache: "force-cache" });
   } catch {
     return null;
   }
@@ -140,14 +141,13 @@ export async function writeLiveCaseStudiesToBlob({
     addedIds: added.map((x) => x.id),
   };
 
-  // Stable pointer, overwritten each run.
-  const manifestBlob = await put(LIVE_MANIFEST_PATH, JSON.stringify(manifest), {
+  // Versioned manifest (avoid CDN cache invalidation problems on overwrite).
+  const manifestPath = `${LIVE_MANIFEST_PREFIX}${encodeURIComponent(runId)}.json`;
+  const manifestBlob = await put(manifestPath, JSON.stringify(manifest), {
     access: "public",
     contentType: "application/json",
     addRandomSuffix: false,
-    allowOverwrite: true,
-    // Keep it fresh; clients should revalidate quickly.
-    cacheControlMaxAge: 60,
+    allowOverwrite: false,
   });
 
   return { snapshotUrl: snapshot.url, manifestUrl: manifestBlob.url, manifest };
