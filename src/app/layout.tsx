@@ -17,6 +17,9 @@ export const metadata: Metadata = {
   title: "How AI agents make money — documented case studies | AgentProfit.ai",
   description:
     "A living catalog of publicly verifiable case studies showing how AI agents make money (or profit) in the wild. Not financial advice.",
+  icons: {
+    icon: "/icon.svg",
+  },
 };
 
 export default function RootLayout({

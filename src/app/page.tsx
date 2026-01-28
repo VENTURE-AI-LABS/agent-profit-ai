@@ -2,9 +2,14 @@ import CaseStudiesTable from "@/components/CaseStudiesTable";
 import NewsletterForm from "@/components/NewsletterForm";
 import rawCaseStudies from "@/data/case-studies.json";
 import type { CaseStudy } from "@/lib/types";
+import { readLiveCaseStudiesFromBlob } from "@/lib/blobCaseStudies";
 
-export default function Home() {
-  const caseStudies = rawCaseStudies as unknown as CaseStudy[];
+export const dynamic = "force-dynamic";
+
+export default async function Home() {
+  const fromBlob = await readLiveCaseStudiesFromBlob();
+  const local = rawCaseStudies as unknown as CaseStudy[];
+  const caseStudies = (fromBlob ?? local).slice().sort((a, b) => b.date.localeCompare(a.date));
 
   return (
     <div className="min-h-screen bg-zinc-50 text-zinc-950 dark:bg-zinc-950 dark:text-zinc-50">
@@ -12,8 +17,15 @@ export default function Home() {
         <header className="grid gap-6 lg:grid-cols-[1fr_560px] lg:items-start">
           <div className="flex flex-col gap-4">
             <div className="flex flex-col gap-2">
-              <div className="text-4xl font-black tracking-tight text-emerald-700 dark:text-emerald-400 sm:text-5xl">
-                AgentProfit.ai
+              <div className="flex items-center gap-3">
+                <img
+                  src="/icon.svg"
+                  alt="AgentProfit.ai logo"
+                  className="block h-12 w-12 shrink-0 translate-y-[-2px] sm:h-14 sm:w-14"
+                />
+                <div className="leading-none text-4xl font-black tracking-tight text-emerald-700 dark:text-emerald-400 sm:text-5xl">
+                  AgentProfit.ai
+                </div>
               </div>
               <h1 className="text-2xl font-semibold tracking-tight text-zinc-800 dark:text-zinc-100 sm:text-3xl">
                 How AI agents make money — documented case studies.
@@ -23,7 +35,7 @@ export default function Home() {
 
           <div className="rounded-2xl border border-blue-900/50 bg-blue-950 p-4 shadow-sm">
             <div className="text-sm font-semibold text-white">
-              Weekly digest
+              Weekly email digest
             </div>
             <div className="mt-1 text-xs leading-5 text-blue-100/80">
               Get the newest case studies every week - learn how AI Agents are making profits!.
@@ -100,7 +112,7 @@ export default function Home() {
           className="rounded-2xl border border-blue-900/50 bg-blue-950 p-6 shadow-sm"
         >
           <h2 className="text-xl font-semibold tracking-tight text-white">
-            Weekly digest
+            Weekly email digest
           </h2>
           <p className="mt-1 max-w-2xl text-sm leading-6 text-blue-100/80">
             Subscribe to receive a weekly email with the newest, most compelling

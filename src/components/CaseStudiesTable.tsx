@@ -1,6 +1,7 @@
 "use client";
 
-import { Fragment, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import type { CaseStudy } from "@/lib/types";
 import MoneyText from "@/components/MoneyText";
 
@@ -61,15 +62,48 @@ function statusPillClasses(status: string) {
   return `${base} border-orange-200 bg-orange-50 text-orange-800 dark:border-orange-900/60 dark:bg-orange-950/40 dark:text-orange-300`;
 }
 
+function escapeRegExp(input: string) {
+  return input.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function wildcardToRegex(pattern: string) {
+  // Support:
+  // - "*" => any characters
+  // - "?" => single character
+  // Otherwise do a simple "contains" via .*<pattern>.*
+  const escaped = escapeRegExp(pattern).replaceAll("\\*", ".*").replaceAll("\\?", ".");
+  return new RegExp(escaped, "i");
+}
+
+function caseStudySearchText(cs: CaseStudy) {
+  const proof = (cs.proofSources ?? [])
+    .map((s) => `${s.label ?? ""} ${s.url ?? ""} ${s.kind ?? ""} ${s.excerpt ?? ""}`)
+    .join(" ");
+  return [
+    cs.id,
+    cs.date,
+    cs.title,
+    cs.summary,
+    cs.description,
+    ...(cs.tags ?? []),
+    ...(cs.profitMechanisms ?? []),
+    proof,
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+}
+
 export default function CaseStudiesTable({
   caseStudies,
 }: {
   caseStudies: CaseStudy[];
 }) {
+  const router = useRouter();
   const [sortKey, setSortKey] = useState<SortKey>("date");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
-  const [expandedIds, setExpandedIds] = useState<Record<string, boolean>>({});
+  const [query, setQuery] = useState("");
 
   const filteredAndSorted = useMemo(() => {
     const normalized = caseStudies.map((cs) => ({
@@ -80,8 +114,17 @@ export default function CaseStudiesTable({
       statusFilter === "all"
         ? normalized
         : normalized.filter((cs) => cs.status === statusFilter);
-    return sortCaseStudies(filtered, sortKey, sortDir);
-  }, [caseStudies, sortKey, sortDir, statusFilter]);
+
+    const q = query.trim();
+    const searched = !q
+      ? filtered
+      : (() => {
+          const rx = wildcardToRegex(`*${q}*`);
+          return filtered.filter((cs) => rx.test(caseStudySearchText(cs)));
+        })();
+
+    return sortCaseStudies(searched, sortKey, sortDir);
+  }, [caseStudies, sortKey, sortDir, statusFilter, query]);
 
   function toggleSort(key: SortKey) {
     if (key === sortKey) {
@@ -90,10 +133,6 @@ export default function CaseStudiesTable({
     }
     setSortKey(key);
     setSortDir(key === "date" ? "desc" : "asc");
-  }
-
-  function toggleExpanded(id: string) {
-    setExpandedIds((prev) => ({ ...prev, [id]: !prev[id] }));
   }
 
   if (!caseStudies.length) {
@@ -124,27 +163,45 @@ export default function CaseStudiesTable({
           </span>
         </div>
 
-        <label className="flex items-center gap-2 text-sm text-zinc-700 dark:text-zinc-300">
-          <span className="font-medium">Status</span>
-          <select
-            className="rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 shadow-sm outline-none transition focus:border-zinc-400 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-50 dark:focus:border-zinc-600"
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
-          >
-            <option value="all">All</option>
-            <option value="verified">Verified</option>
-            <option value="speculation">Speculation</option>
-          </select>
-        </label>
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+          <label className="flex items-center gap-2 text-sm text-zinc-700 dark:text-zinc-300">
+            <span className="font-medium">Filter</span>
+            <input
+              className="w-full rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 shadow-sm outline-none transition focus:border-zinc-400 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-50 dark:focus:border-zinc-600 sm:w-[320px]"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search"
+              inputMode="search"
+            />
+          </label>
+          {query.trim() && (
+            <button
+              type="button"
+              className="inline-flex items-center justify-center rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm font-semibold text-zinc-700 shadow-sm transition hover:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-200 dark:hover:bg-zinc-900"
+              onClick={() => setQuery("")}
+            >
+              Clear
+            </button>
+          )}
+          <label className="flex items-center gap-2 text-sm text-zinc-700 dark:text-zinc-300">
+            <span className="font-medium">Status</span>
+            <select
+              className="rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 shadow-sm outline-none transition focus:border-zinc-400 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-50 dark:focus:border-zinc-600"
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
+            >
+              <option value="all">All</option>
+              <option value="verified">Verified</option>
+              <option value="speculation">Speculation</option>
+            </select>
+          </label>
+        </div>
       </div>
 
       <div className="overflow-x-auto">
         <table className="w-full min-w-[720px] border-separate border-spacing-0">
           <thead>
             <tr className="text-left text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
-              <th className="w-10 border-b border-zinc-200 px-4 py-3 dark:border-zinc-800">
-                {/* expand */}
-              </th>
               <th
                 className="cursor-pointer select-none whitespace-nowrap border-b border-zinc-200 px-4 py-3 dark:border-zinc-800"
                 onClick={() => toggleSort("date")}
@@ -172,16 +229,20 @@ export default function CaseStudiesTable({
           </thead>
           <tbody>
             {filteredAndSorted.map((cs) => {
-              const expanded = !!expandedIds[cs.id];
               return (
-                <Fragment key={cs.id}>
-                  <tr
-                    className="cursor-pointer align-top text-sm text-zinc-800 hover:bg-zinc-50 dark:text-zinc-200 dark:hover:bg-zinc-800/40"
-                    onClick={() => toggleExpanded(cs.id)}
-                  >
-                    <td className="border-b border-zinc-200 px-4 py-3 text-zinc-500 dark:border-zinc-800 dark:text-zinc-400">
-                      <span className="font-mono">{expanded ? "−" : "+"}</span>
-                    </td>
+                <tr
+                  key={cs.id}
+                  className="cursor-pointer align-top text-sm text-zinc-800 hover:bg-zinc-50 dark:text-zinc-200 dark:hover:bg-zinc-800/40"
+                  role="link"
+                  tabIndex={0}
+                  onClick={() => router.push(`/${cs.id}`)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      router.push(`/${cs.id}`);
+                    }
+                  }}
+                >
                     <td className="min-w-[110px] border-b border-zinc-200 px-4 py-3 text-zinc-600 dark:border-zinc-800 dark:text-zinc-400">
                       <div className="whitespace-nowrap font-mono text-xs">
                         {cs.date}
@@ -191,8 +252,8 @@ export default function CaseStudiesTable({
                       </div>
                     </td>
                     <td className="border-b border-zinc-200 px-4 py-3 dark:border-zinc-800">
-                      <div className="text-base font-semibold leading-6">
-                        <MoneyText text={cs.title} />
+                      <div className="text-base font-semibold leading-6 text-zinc-900 dark:text-white">
+                      <MoneyText text={cs.title} />
                       </div>
                     </td>
                     <td className="border-b border-zinc-200 px-4 py-3 text-zinc-700 dark:border-zinc-800 dark:text-zinc-300">
@@ -214,79 +275,7 @@ export default function CaseStudiesTable({
                         {cs.status ?? "speculation"}
                       </span>
                     </td>
-                  </tr>
-                  {expanded && (
-                    <tr key={`${cs.id}__expanded`}>
-                      <td
-                        className="border-b border-zinc-200 bg-zinc-50 px-4 py-4 dark:border-zinc-800 dark:bg-zinc-950"
-                        colSpan={5}
-                      >
-                        <div className="grid gap-6 md:grid-cols-3">
-                          <div className="md:col-span-2">
-                            <div className="text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
-                              How it works
-                            </div>
-                            <div className="mt-2 whitespace-pre-wrap text-sm leading-6 text-zinc-800 dark:text-zinc-200">
-                              <MoneyText text={cs.description} />
-                            </div>
-
-                            {!!cs.profitMechanisms?.length && (
-                              <div className="mt-5">
-                                <div className="text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
-                                  Profit mechanisms
-                                </div>
-                                <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-zinc-800 dark:text-zinc-200">
-                                  {cs.profitMechanisms.map((m) => (
-                                    <li key={m}>
-                                      <MoneyText text={m} />
-                                    </li>
-                                  ))}
-                                </ul>
-                              </div>
-                            )}
-                          </div>
-
-                          <div>
-                            <div className="text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
-                              Proof sources
-                            </div>
-                            {cs.proofSources?.length ? (
-                              <ul className="mt-2 space-y-2 text-sm">
-                                {cs.proofSources.map((s) => (
-                                  <li key={`${cs.id}:${s.url}`} className="leading-6">
-                                    <a
-                                      className="wrap-break-word font-medium text-zinc-900 underline-offset-2 hover:underline dark:text-zinc-50"
-                                      href={s.url}
-                                      target="_blank"
-                                      rel="noreferrer"
-                                      onClick={(e) => e.stopPropagation()}
-                                    >
-                                      {s.label}
-                                    </a>
-                                    {s.kind && (
-                                      <div className="text-xs text-zinc-500 dark:text-zinc-400">
-                                        {s.kind}
-                                      </div>
-                                    )}
-                                    {s.excerpt && (
-                                      <div className="mt-1 text-xs text-zinc-600 dark:text-zinc-300">
-                                        <MoneyText text={s.excerpt} />
-                                      </div>
-                                    )}
-                                  </li>
-                                ))}
-                              </ul>
-                            ) : (
-                              <div className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
-                                No sources yet.
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </td>
-                    </tr>
-                  )}
-                </Fragment>
+                </tr>
               );
             })}
           </tbody>

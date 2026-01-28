@@ -129,7 +129,7 @@ export default function NewsletterForm({
               : "text-xs leading-5 text-zinc-500 dark:text-zinc-400"
           }
         >
-          Weekly digest. Unsubscribe any time.
+          Weekly email digest. Unsubscribe any time.
         </div>
       )}
     </form>
