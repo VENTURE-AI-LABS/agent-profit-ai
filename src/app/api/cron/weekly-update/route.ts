@@ -279,6 +279,8 @@ async function callClaudeHaiku({
 export type WeeklyUpdateOptions = {
   /** Force-disable Resend sending (scout-only runs). */
   disableSend?: boolean;
+  /** Default time window for accepting new case studies (used when query param is absent). */
+  defaultWithinDays?: number;
 };
 
 export async function runWeeklyUpdate(req: Request, opts: WeeklyUpdateOptions = {}) {
@@ -308,6 +310,7 @@ export async function runWeeklyUpdate(req: Request, opts: WeeklyUpdateOptions = 
   const segmentIdEnv = process.env.RESEND_NEWSLETTER_SEGMENT_ID ?? "";
   const segmentName = process.env.RESEND_NEWSLETTER_SEGMENT_NAME ?? "AgentProfit Newsletter";
   const url = new URL(req.url);
+  const isCron = (req.headers.get("x-vercel-cron") ?? "") === "1";
   const sendParam = (url.searchParams.get("send") ?? "").toLowerCase();
   const sendEnabled =
     !opts.disableSend &&
@@ -329,6 +332,16 @@ export async function runWeeklyUpdate(req: Request, opts: WeeklyUpdateOptions = 
     ? (recencyParam as "day" | "week" | "month" | "year")
     : "week";
   const queryParam = url.searchParams.get("query") ?? url.searchParams.get("q") ?? "";
+  const withinDaysParam = url.searchParams.get("withinDays") ?? url.searchParams.get("days") ?? "";
+  const withinDays =
+    withinDaysParam.trim() !== ""
+      ? Math.max(1, Math.min(60, Number(withinDaysParam) || 0))
+      : Math.max(0, Math.min(60, opts.defaultWithinDays ?? (isCron ? 7 : 0)));
+  const todayUtc = (() => {
+    const now = new Date();
+    return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+  })();
+  const cutoffMs = withinDays ? todayUtc.getTime() - withinDays * 86_400_000 : 0;
 
   const runDate = todayIso();
   const runId = `${runDate}T${new Date().toISOString().slice(11, 19).replaceAll(":", "-")}Z`;
@@ -353,6 +366,12 @@ export async function runWeeklyUpdate(req: Request, opts: WeeklyUpdateOptions = 
         snippet: typeof r?.snippet === "string" ? r.snippet : undefined,
       }))
       .filter((r) => r.title && r.url && isHttpUrl(r.url))
+      .filter((r) => {
+        if (!withinDays) return true;
+        if (!r.date) return true;
+        const t = new Date(`${r.date}T00:00:00Z`).getTime();
+        return Number.isFinite(t) ? t >= cutoffMs : true;
+      })
       .slice(0, limit);
 
     const allowedUrls = new Set(sources.map((s) => s.url));
@@ -380,6 +399,10 @@ export async function runWeeklyUpdate(req: Request, opts: WeeklyUpdateOptions = 
         existingIds,
       });
       if (!cs) continue;
+      if (withinDays) {
+        const t = new Date(`${cs.date}T00:00:00Z`).getTime();
+        if (!Number.isFinite(t) || t < cutoffMs) continue;
+      }
       // Deduplicate by any existing proof URL.
       if (cs.proofSources.some((s) => existingUrls.has(s.url))) continue;
       added.push(cs);
