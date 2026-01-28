@@ -270,7 +270,12 @@ async function callClaudeHaiku({
   return arr as unknown[];
 }
 
-export async function GET(req: Request) {
+export type WeeklyUpdateOptions = {
+  /** Force-disable Resend sending (scout-only runs). */
+  disableSend?: boolean;
+};
+
+export async function runWeeklyUpdate(req: Request, opts: WeeklyUpdateOptions = {}) {
   if (!isAuthorized(req)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
@@ -293,19 +298,22 @@ export async function GET(req: Request) {
   if (!perplexityKey) return NextResponse.json({ error: "PERPLEXITY_API_KEY is missing." }, { status: 500 });
   if (!anthropicKey) return NextResponse.json({ error: "ANTHROPIC_API_KEY is missing." }, { status: 500 });
 
-  const resendApiKey = process.env.RESEND_API_KEY ?? "";
-  const from = process.env.RESEND_FROM ?? "";
-  if (!resendApiKey) return NextResponse.json({ error: "RESEND_API_KEY is missing." }, { status: 500 });
-  if (!from) return NextResponse.json({ error: "RESEND_FROM is missing." }, { status: 500 });
-
   const siteUrl = process.env.SITE_URL ?? "https://agentprofit.ai";
   const segmentIdEnv = process.env.RESEND_NEWSLETTER_SEGMENT_ID ?? "";
   const segmentName = process.env.RESEND_NEWSLETTER_SEGMENT_NAME ?? "AgentProfit Newsletter";
   const url = new URL(req.url);
   const sendParam = (url.searchParams.get("send") ?? "").toLowerCase();
   const sendEnabled =
+    !opts.disableSend &&
     (process.env.WEEKLY_DIGEST_ENABLED ?? "true").toLowerCase() === "true" &&
     ((process.env.NODE_ENV === "production" && sendParam !== "0") || sendParam === "1");
+
+  const resendApiKey = process.env.RESEND_API_KEY ?? "";
+  const from = process.env.RESEND_FROM ?? "";
+  if (sendEnabled) {
+    if (!resendApiKey) return NextResponse.json({ error: "RESEND_API_KEY is missing." }, { status: 500 });
+    if (!from) return NextResponse.json({ error: "RESEND_FROM is missing." }, { status: 500 });
+  }
 
   const force = (url.searchParams.get("force") ?? "") === "1";
   const limit = Math.max(1, Math.min(25, Number(url.searchParams.get("searchLimit") ?? "20") || 20));
@@ -441,7 +449,11 @@ export async function GET(req: Request) {
   }
 }
 
+export async function GET(req: Request) {
+  return runWeeklyUpdate(req);
+}
+
 export async function POST(req: Request) {
-  return GET(req);
+  return runWeeklyUpdate(req);
 }
 

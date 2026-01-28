@@ -1,8 +1,12 @@
 {
   "crons": [
     {
-      "path": "/api/cron/weekly-update",
+      "path": "/api/cron/weekly-scout",
       "schedule": "0 14 * * 1"
+    },
+    {
+      "path": "/api/cron/weekly-digest",
+      "schedule": "15 14 * * 1"
     }
   ]
 }

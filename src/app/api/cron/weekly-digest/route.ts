@@ -57,7 +57,8 @@ export async function GET(req: Request) {
     const fromBlob = await readLiveCaseStudiesFromBlob();
     const local = rawCaseStudies as unknown as CaseStudy[];
     const all = (fromBlob ?? local).slice().sort((a, b) => b.date.localeCompare(a.date));
-    const days = daysParam ? Math.max(1, Math.min(60, Number(daysParam) || 0)) : 0;
+    const isCron = (req.headers.get("x-vercel-cron") ?? "") === "1";
+    const days = daysParam ? Math.max(1, Math.min(60, Number(daysParam) || 0)) : isCron ? 7 : 0;
     const limit = limitParam ? Math.max(1, Math.min(50, Number(limitParam) || 0)) : 10;
 
     const todayUtc = (() => {
