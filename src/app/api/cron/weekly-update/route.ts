@@ -173,16 +173,53 @@ async function writeJsonFile(p: string, value: unknown) {
   void value;
 }
 
+function formatMmDdYyyyUTC(d: Date) {
+  const mm = String(d.getUTCMonth() + 1).padStart(2, "0");
+  const dd = String(d.getUTCDate()).padStart(2, "0");
+  const yyyy = String(d.getUTCFullYear());
+  return `${mm}/${dd}/${yyyy}`;
+}
+
+function extractPerplexityResponseText(json: any) {
+  const output = Array.isArray(json?.output) ? (json.output as any[]) : [];
+  const texts: string[] = [];
+  for (const item of output) {
+    if (item?.type !== "message") continue;
+    const parts = Array.isArray(item?.content) ? (item.content as any[]) : [];
+    for (const part of parts) {
+      if (part?.type === "output_text" && typeof part?.text === "string") {
+        texts.push(part.text);
+      }
+    }
+  }
+  return texts.join("");
+}
+
+type PerplexityDeepResearchJson = {
+  report: string;
+  sources: Array<{
+    title: string;
+    url: string;
+    date: string; // YYYY-MM-DD
+    last_updated?: string; // YYYY-MM-DD
+    snippet: string; // verbatim excerpt containing $ amount
+  }>;
+};
+
 async function callPerplexity({
   apiKey,
   query,
   recency,
   numSearchResults,
+  withinDays,
+  todayUtc,
 }: {
   apiKey: string;
   query: string;
   recency: "day" | "week" | "month" | "year";
   numSearchResults: number;
+  withinDays: number;
+  todayUtc: Date;
 }): Promise<{
   model?: string;
   content: string;
@@ -190,33 +227,87 @@ async function callPerplexity({
   searchResults: Array<{ title?: string; url?: string; date?: string; snippet?: string }>;
   raw: unknown;
 }> {
-  const model = process.env.PERPLEXITY_MODEL ?? "sonar-pro";
-  const res = await fetch("https://api.perplexity.ai/chat/completions", {
+  const preset = process.env.PERPLEXITY_PRESET ?? "deep-research";
+  const socialDeny = Array.from(SOCIAL_HOSTS)
+    .filter((d) => !d.includes("."))
+    .map((d) => `-${d}`);
+  const cutoffUtc = withinDays ? new Date(todayUtc.getTime() - withinDays * 86_400_000) : null;
+
+  const schema = {
+    type: "object",
+    additionalProperties: false,
+    required: ["report", "sources"],
+    properties: {
+      report: { type: "string" },
+      sources: {
+        type: "array",
+        maxItems: 25,
+        items: {
+          type: "object",
+          additionalProperties: false,
+          required: ["title", "url", "date", "snippet"],
+          properties: {
+            title: { type: "string" },
+            url: { type: "string" },
+            date: { type: "string", description: "YYYY-MM-DD" },
+            last_updated: { type: "string", description: "YYYY-MM-DD" },
+            snippet: { type: "string", description: "Verbatim excerpt containing the $ amount." },
+          },
+        },
+      },
+    },
+  };
+
+  const instructions = [
+    "You are a research agent for AgentProfit.ai.",
+    "Goal: find publicly verifiable examples of AI agents/agentic workflows that made money with explicit $ amounts.",
+    "Exclude fundraising/valuations/grants.",
+    "Prefer official pages, winners lists, public dashboards, or reputable reporting.",
+    "Output MUST be valid JSON matching the provided schema.",
+    "In sources[].snippet, include a VERBATIM quote that contains the $ amount.",
+    "Avoid social media sources (Facebook/X/Twitter/LinkedIn/Reddit/TikTok/Instagram/Discord/Telegram).",
+    `Return at most ${Math.max(5, Math.min(25, numSearchResults))} sources.`,
+  ].join("\n");
+
+  const toolFilters: any = {
+    search_domain_filter: socialDeny.slice(0, 20),
+  };
+  // Prefer explicit published + last-updated windows when we have a cutoff.
+  // (Docs note recency can't be combined with explicit date filters.)
+  if (cutoffUtc) {
+    toolFilters.search_after_date_filter = formatMmDdYyyyUTC(cutoffUtc);
+    toolFilters.search_before_date_filter = formatMmDdYyyyUTC(todayUtc);
+    toolFilters.last_updated_after_filter = formatMmDdYyyyUTC(cutoffUtc);
+    toolFilters.last_updated_before_filter = formatMmDdYyyyUTC(todayUtc);
+  } else {
+    toolFilters.search_recency_filter = recency;
+  }
+
+  const res = await fetch("https://api.perplexity.ai/v1/responses", {
     method: "POST",
     headers: {
       Authorization: `Bearer ${apiKey}`,
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      model,
-      temperature: 0.2,
-      max_tokens: 1400,
-      web_search_options: {
-        search_recency_filter: recency,
-        num_search_results: numSearchResults,
-        safe_search: true,
-      },
-      messages: [
+      preset,
+      input: query,
+      instructions,
+      max_steps: 10,
+      max_output_tokens: 2500,
+      tools: [
         {
-          role: "system",
-          content:
-            "You are a research assistant. Find *publicly verifiable* examples of AI agents making money in the last 7 days. Exclude fundraising/valuations/grants. Prefer official pages, winners lists, public dashboards, or reputable reporting. Prioritize items with explicit $ amounts.",
+          type: "web_search",
+          filters: toolFilters,
+          max_tokens_per_page: 2048,
+          max_tokens: 25000,
         },
-        {
-          role: "user",
-          content: query,
-        },
+        { type: "fetch_url", max_urls: 5 },
       ],
+      response_format: {
+        type: "json_schema",
+        json_schema: { name: "agentprofit_deep_research", schema, strict: true },
+      },
     }),
   });
 
@@ -226,11 +317,11 @@ async function callPerplexity({
   }
 
   const json = (await res.json()) as any;
-  const content = String(json?.choices?.[0]?.message?.content ?? "");
-  const citations = Array.isArray(json?.citations) ? (json.citations as string[]) : [];
-  const searchResults = Array.isArray(json?.search_results) ? (json.search_results as any[]) : [];
-
-  return { model, content, citations, searchResults, raw: json };
+  const text = extractPerplexityResponseText(json);
+  const parsed = JSON.parse(text) as PerplexityDeepResearchJson;
+  const citations = Array.isArray(parsed?.sources) ? parsed.sources.map((s) => s.url).filter(Boolean) : [];
+  const searchResults = Array.isArray(parsed?.sources) ? parsed.sources : [];
+  return { model: json?.model ?? preset, content: parsed?.report ?? "", citations, searchResults, raw: json };
 }
 
 async function callClaudeHaiku({
@@ -390,6 +481,8 @@ export async function runWeeklyUpdate(req: Request, opts: WeeklyUpdateOptions = 
       query,
       recency,
       numSearchResults: Math.max(10, limit),
+      withinDays,
+      todayUtc,
     });
 
     const sources = (Array.isArray(p.searchResults) ? p.searchResults : [])
