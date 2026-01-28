@@ -2,8 +2,8 @@ import { runWeeklyUpdate } from "@/app/api/cron/weekly-update/route";
 
 export const runtime = "nodejs";
 
-// Deprecated alias for /api/cron/find-new-case-studies
-// (kept temporarily to avoid breaking old manual calls).
+// Updates Blob case studies but never sends email.
+// Supports ?find=N to cap how many new case studies are added (default 10).
 export async function GET(req: Request) {
   return runWeeklyUpdate(req, { disableSend: true });
 }

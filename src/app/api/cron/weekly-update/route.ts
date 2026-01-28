@@ -201,10 +201,12 @@ async function callClaudeHaiku({
   apiKey,
   sources,
   perplexitySummary,
+  maxItems,
 }: {
   apiKey: string;
   sources: Array<{ title: string; url: string; date?: string; snippet?: string }>;
   perplexitySummary: string;
+  maxItems: number;
 }): Promise<unknown[]> {
   const model = process.env.ANTHROPIC_MODEL ?? "claude-haiku-4-5";
 
@@ -235,7 +237,7 @@ async function callClaudeHaiku({
     JSON.stringify(sources, null, 2),
     "",
     "Task:",
-    "- Produce up to 10 CaseStudy JSON objects that meet the strict rules.",
+    `- Produce up to ${maxItems} CaseStudy JSON objects that meet the strict rules.`,
     "- Ensure each has 2+ proofSources from the allowed sources.",
   ].join("\n");
 
@@ -317,6 +319,7 @@ export async function runWeeklyUpdate(req: Request, opts: WeeklyUpdateOptions = 
 
   const force = (url.searchParams.get("force") ?? "") === "1";
   const limit = Math.max(1, Math.min(25, Number(url.searchParams.get("searchLimit") ?? "20") || 20));
+  const find = Math.max(1, Math.min(10, Number(url.searchParams.get("find") ?? url.searchParams.get("maxNew") ?? "10") || 10));
 
   const runDate = todayIso();
   const runId = `${runDate}T${new Date().toISOString().slice(11, 19).replaceAll(":", "-")}Z`;
@@ -343,6 +346,7 @@ export async function runWeeklyUpdate(req: Request, opts: WeeklyUpdateOptions = 
       apiKey: anthropicKey,
       sources,
       perplexitySummary: p.content,
+      maxItems: find,
     });
 
     const fromBlob = await readLiveCaseStudiesFromBlob();
@@ -353,6 +357,7 @@ export async function runWeeklyUpdate(req: Request, opts: WeeklyUpdateOptions = 
 
     const added: CaseStudy[] = [];
     for (const cand of claudeCandidates) {
+      if (added.length >= find) break;
       const cs = normalizeCaseStudyCandidate({
         cs: cand,
         allowedUrls,

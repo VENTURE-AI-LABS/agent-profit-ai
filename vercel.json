@@ -1,7 +1,7 @@
 {
   "crons": [
     {
-      "path": "/api/cron/weekly-scout",
+      "path": "/api/cron/find-new-case-studies",
       "schedule": "0 14 * * 1"
     },
     {
