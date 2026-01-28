@@ -302,9 +302,10 @@ export async function GET(req: Request) {
   const segmentIdEnv = process.env.RESEND_NEWSLETTER_SEGMENT_ID ?? "";
   const segmentName = process.env.RESEND_NEWSLETTER_SEGMENT_NAME ?? "AgentProfit Newsletter";
   const url = new URL(req.url);
+  const sendParam = (url.searchParams.get("send") ?? "").toLowerCase();
   const sendEnabled =
     (process.env.WEEKLY_DIGEST_ENABLED ?? "true").toLowerCase() === "true" &&
-    (process.env.NODE_ENV === "production" || (url.searchParams.get("send") ?? "") === "1");
+    ((process.env.NODE_ENV === "production" && sendParam !== "0") || sendParam === "1");
 
   const force = (url.searchParams.get("force") ?? "") === "1";
   const limit = Math.max(1, Math.min(25, Number(url.searchParams.get("searchLimit") ?? "20") || 20));
