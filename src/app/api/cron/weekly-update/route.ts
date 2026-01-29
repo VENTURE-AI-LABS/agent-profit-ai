@@ -201,10 +201,42 @@ type PerplexityDeepResearchJson = {
     title: string;
     url: string;
     date: string; // YYYY-MM-DD
-    last_updated?: string; // YYYY-MM-DD
     snippet: string; // verbatim excerpt containing $ amount
   }>;
 };
+
+type PerplexityAsyncJob = {
+  id: string;
+  model: string;
+  status: "CREATED" | "IN_PROGRESS" | "COMPLETED" | "FAILED";
+  created_at?: number;
+  started_at?: number | null;
+  completed_at?: number | null;
+  failed_at?: number | null;
+  error_message?: string | null;
+  response?: {
+    id?: string;
+    model?: string;
+    created?: number;
+    citations?: string[];
+    search_results?: Array<{ title?: string; url?: string; date?: string; snippet?: string; source?: string }>;
+    choices?: Array<{ message?: { content?: string; role?: string } }>;
+  } | null;
+};
+
+async function fetchPerplexityAsyncJob({ apiKey, requestId }: { apiKey: string; requestId: string }): Promise<PerplexityAsyncJob> {
+  const res = await fetch(`https://api.perplexity.ai/async/chat/completions/${encodeURIComponent(requestId)}`, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+    },
+  });
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    throw new Error(`Perplexity async failed: ${res.status} ${body.slice(0, 1500)}`);
+  }
+  return (await res.json()) as PerplexityAsyncJob;
+}
 
 async function callPerplexity({
   apiKey,
@@ -227,10 +259,7 @@ async function callPerplexity({
   searchResults: Array<{ title?: string; url?: string; date?: string; snippet?: string }>;
   raw: unknown;
 }> {
-  const preset = process.env.PERPLEXITY_PRESET ?? "deep-research";
-  const socialDeny = Array.from(SOCIAL_HOSTS)
-    .filter((d) => !d.includes("."))
-    .map((d) => `-${d}`);
+  const socialDeny = Array.from(SOCIAL_HOSTS).map((d) => `-${d}`);
   const cutoffUtc = withinDays ? new Date(todayUtc.getTime() - withinDays * 86_400_000) : null;
 
   const schema = {
@@ -250,7 +279,6 @@ async function callPerplexity({
             title: { type: "string" },
             url: { type: "string" },
             date: { type: "string", description: "YYYY-MM-DD" },
-            last_updated: { type: "string", description: "YYYY-MM-DD" },
             snippet: { type: "string", description: "Verbatim excerpt containing the $ amount." },
           },
         },
@@ -265,7 +293,7 @@ async function callPerplexity({
     "Prefer official pages, winners lists, public dashboards, or reputable reporting.",
     "Output MUST be valid JSON matching the provided schema.",
     "In sources[].snippet, include a VERBATIM quote that contains the $ amount.",
-    "Avoid social media sources (Facebook/X/Twitter/LinkedIn/Reddit/TikTok/Instagram/Discord/Telegram).",
+    "Avoid social media sources (Facebook/X/Twitter/LinkedIn/Reddit/TikTok/Instagram/Discord/Telegram). YouTube is allowed.",
     `Return at most ${Math.max(5, Math.min(25, numSearchResults))} sources.`,
   ].join("\n");
 
@@ -277,51 +305,109 @@ async function callPerplexity({
   if (cutoffUtc) {
     toolFilters.search_after_date_filter = formatMmDdYyyyUTC(cutoffUtc);
     toolFilters.search_before_date_filter = formatMmDdYyyyUTC(todayUtc);
-    toolFilters.last_updated_after_filter = formatMmDdYyyyUTC(cutoffUtc);
-    toolFilters.last_updated_before_filter = formatMmDdYyyyUTC(todayUtc);
   } else {
     toolFilters.search_recency_filter = recency;
   }
 
-  const res = await fetch("https://api.perplexity.ai/v1/responses", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      preset,
-      input: query,
-      instructions,
-      max_steps: 10,
-      max_output_tokens: 2500,
-      tools: [
-        {
-          type: "web_search",
-          filters: toolFilters,
-          max_tokens_per_page: 2048,
-          max_tokens: 25000,
-        },
-        { type: "fetch_url", max_urls: 5 },
-      ],
-      response_format: {
-        type: "json_schema",
-        json_schema: { name: "agentprofit_deep_research", schema, strict: true },
+  async function callChatCompletions() {
+    const model = process.env.PERPLEXITY_MODEL ?? "sonar-pro";
+    const res = await fetch("https://api.perplexity.ai/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
       },
-    }),
-  });
+      body: JSON.stringify({
+        model,
+        temperature: 0.2,
+        messages: [
+          {
+            role: "user",
+            content: [
+              "Find publicly verifiable examples of AI agents/agentic workflows that made money with explicit $ amounts.",
+              "Exclude fundraising/valuations/grants.",
+              "Avoid social media sources as proof (Facebook/X/Twitter/LinkedIn/Reddit/TikTok/Instagram/Discord/Telegram). YouTube is allowed.",
+              `Return at most ${Math.max(5, Math.min(25, numSearchResults))} sources.`,
+              "",
+              `Query: ${query}`,
+            ].join("\n"),
+          },
+        ],
+        web_search_options: {
+          search_context_size: "low",
+          ...toolFilters,
+        },
+      }),
+    });
 
-  if (!res.ok) {
-    const body = await res.text().catch(() => "");
-    throw new Error(`Perplexity failed: ${res.status} ${body.slice(0, 1500)}`);
+    if (!res.ok) {
+      const body = await res.text().catch(() => "");
+      throw new Error(`Perplexity chat/completions failed: ${res.status} ${body.slice(0, 1500)}`);
+    }
+
+    const json = (await res.json()) as any;
+    const content =
+      typeof json?.choices?.[0]?.message?.content === "string" ? (json.choices[0].message.content as string) : "";
+    const citations = Array.isArray(json?.citations) ? (json.citations as any[]).map(String).filter(Boolean) : [];
+    const searchResults = Array.isArray(json?.search_results) ? (json.search_results as any[]) : [];
+    return { model: String(json?.model ?? model), content, citations, searchResults, raw: json };
   }
 
-  const json = (await res.json()) as any;
-  const text = extractPerplexityResponseText(json);
-  const parsed = JSON.parse(text) as PerplexityDeepResearchJson;
-  const citations = Array.isArray(parsed?.sources) ? parsed.sources.map((s) => s.url).filter(Boolean) : [];
-  const searchResults = Array.isArray(parsed?.sources) ? parsed.sources : [];
-  return { model: json?.model ?? preset, content: parsed?.report ?? "", citations, searchResults, raw: json };
+  // Optional attempt: Agentic Research deep-research (can be slow). If it fails/timeouts, fall back to chat/completions.
+  const preset = (process.env.PERPLEXITY_PRESET ?? "").trim();
+  if (preset) {
+    const timeoutMs = Math.max(
+      10_000,
+      Math.min(120_000, Number(process.env.PERPLEXITY_TIMEOUT_MS ?? "35000") || 35_000),
+    );
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      const res = await fetch("https://api.perplexity.ai/v1/responses", {
+        method: "POST",
+        signal: controller.signal,
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          preset,
+          input: query,
+          instructions,
+          max_steps: 4,
+          max_output_tokens: 1500,
+          tools: [
+            {
+              type: "web_search",
+              filters: toolFilters,
+            },
+          ],
+          response_format: {
+            type: "json_schema",
+            json_schema: { name: "agentprofit_deep_research", schema, strict: true },
+          },
+        }),
+      });
+
+      if (!res.ok) {
+        const body = await res.text().catch(() => "");
+        throw new Error(`Perplexity responses failed: ${res.status} ${body.slice(0, 1500)}`);
+      }
+
+      const json = (await res.json()) as any;
+      const text = extractPerplexityResponseText(json);
+      const parsed = JSON.parse(text) as PerplexityDeepResearchJson;
+      const citations = Array.isArray(parsed?.sources) ? parsed.sources.map((s) => s.url).filter(Boolean) : [];
+      const searchResults = Array.isArray(parsed?.sources) ? parsed.sources : [];
+      return { model: String(json?.model ?? preset), content: parsed?.report ?? "", citations, searchResults, raw: json };
+    } catch {
+      // Fall back below.
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
+
+  return callChatCompletions();
 }
 
 async function callClaudeHaiku({
@@ -350,7 +436,7 @@ async function callClaudeHaiku({
     "- At least one proofSources.excerpt MUST contain the $ amount and MUST be copied verbatim from a provided snippet (no paraphrasing in excerpts).",
     "- Title MUST include a $ amount (include '$' character).",
     "- If the sources/snippets are too thin to be confident, set status to 'speculation' and explicitly state the proof gap in the description.",
-    "- Do NOT use social media links (e.g. X/Twitter, Facebook, LinkedIn, Reddit, TikTok, Instagram, Discord, Telegram) as the only proof source.",
+    "- Do NOT use social media links (e.g. X/Twitter, Facebook, LinkedIn, Reddit, TikTok, Instagram, Discord, Telegram) as the only proof source. YouTube is allowed.",
     "",
     "CaseStudy schema:",
     "{ id, date(YYYY-MM-DD), title, summary, description, profitMechanisms[], tags[], proofSources[{label,url,kind?,excerpt?}], status('verified'|'speculation') }",
@@ -476,14 +562,51 @@ export async function runWeeklyUpdate(req: Request, opts: WeeklyUpdateOptions = 
       (queryParam || "").trim().slice(0, 600) ||
       "Find AI agents or agentic workflows that made money in the last 7 days. Only include items with explicit dollar amounts (e.g., prizes, bounties, revenue/MRR) and public sources.";
 
-    const p = await callPerplexity({
-      apiKey: perplexityKey,
-      query,
-      recency,
-      numSearchResults: Math.max(10, limit),
-      withinDays,
-      todayUtc,
-    });
+    const pplxAsyncRequestId = (url.searchParams.get("pplxAsyncRequestId") ?? "").trim();
+    let p: Awaited<ReturnType<typeof callPerplexity>>;
+    if (pplxAsyncRequestId) {
+      const job = await fetchPerplexityAsyncJob({ apiKey: perplexityKey, requestId: pplxAsyncRequestId });
+      if (job.status !== "COMPLETED") {
+        if (job.status === "FAILED") {
+          return NextResponse.json(
+            {
+              error: "Perplexity async job failed.",
+              requestId: pplxAsyncRequestId,
+              status: job.status,
+              details: (job.error_message ?? "").trim() || "unknown error",
+            },
+            { status: 502 },
+          );
+        }
+        return NextResponse.json(
+          { ok: true, pending: true, requestId: pplxAsyncRequestId, status: job.status, runId },
+          { status: 202 },
+        );
+      }
+
+      const resp = job.response ?? {};
+      const content = String(resp?.choices?.[0]?.message?.content ?? "");
+      const searchResults = Array.isArray(resp?.search_results) ? (resp.search_results as any[]) : [];
+      const citations = Array.isArray(resp?.citations)
+        ? (resp.citations as any[]).map(String).filter(Boolean)
+        : searchResults.map((s) => String((s as any)?.url ?? "")).filter(Boolean);
+      p = {
+        model: String(resp?.model ?? job.model ?? "sonar-deep-research"),
+        content,
+        citations,
+        searchResults,
+        raw: job,
+      };
+    } else {
+      p = await callPerplexity({
+        apiKey: perplexityKey,
+        query,
+        recency,
+        numSearchResults: Math.max(10, limit),
+        withinDays,
+        todayUtc,
+      });
+    }
 
     const sources = (Array.isArray(p.searchResults) ? p.searchResults : [])
       .map((r) => ({

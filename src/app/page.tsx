@@ -21,7 +21,7 @@ export default async function Home() {
                 <img
                   src="/icon.svg"
                   alt="AgentProfit.ai logo"
-                  className="block h-12 w-12 shrink-0 translate-y-[-2px] sm:h-14 sm:w-14"
+                  className="block h-12 w-12 shrink-0 translate-y-[-4px] sm:h-14 sm:w-14"
                 />
                 <div className="leading-none text-4xl font-black tracking-tight text-emerald-700 dark:text-emerald-400 sm:text-5xl">
                   AgentProfit.ai

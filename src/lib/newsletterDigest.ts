@@ -23,18 +23,20 @@ export function renderWeeklyDigestEmail({
   siteUrl,
   items,
   title = "Weekly email digest — newest case studies",
+  subject,
 }: {
   siteUrl: string;
   items: CaseStudy[];
   title?: string;
+  subject?: string;
 }) {
   const today = new Date().toISOString().slice(0, 10);
-  const subject = `Weekly email digest: ${items.length} new AgentProfit.ai case studies (${today})`;
+  const computedSubject = subject ?? `Weekly email digest: ${items.length} new AgentProfit.ai case studies (${today})`;
 
   const intro =
     items.length === 1
-      ? "Here is the newest publicly verifiable case study added to AgentProfit.ai."
-      : `Here are ${items.length} publicly verifiable case studies added to AgentProfit.ai.`;
+      ? "Here is the newest publicly verifiable case study added to AgentProfit.ai database."
+      : `Here are ${items.length} publicly verifiable case studies added to AgentProfit.ai database.`;
 
   const listRowsHtml = items
     .map((cs) => {
@@ -99,6 +101,6 @@ export function renderWeeklyDigestEmail({
     .join("\n\n")}\n\nView all case studies: ${siteUrl}\n`;
 
   const name = `weekly-digest-${today}`;
-  return { name, subject, html, text };
+  return { name, subject: computedSubject, html, text };
 }
 

@@ -46,6 +46,7 @@ export async function GET(req: Request) {
 
   const siteUrl = process.env.SITE_URL ?? "https://agentprofit.ai";
   const from = process.env.RESEND_FROM ?? "AgentProfit <onboarding@resend.dev>";
+  const testToEnv = process.env.RESEND_TEST_TO ?? "";
   const segmentIdEnv = process.env.RESEND_NEWSLETTER_SEGMENT_ID ?? "";
   const segmentName = process.env.RESEND_NEWSLETTER_SEGMENT_NAME ?? "AgentProfit Newsletter";
 
@@ -53,6 +54,8 @@ export async function GET(req: Request) {
     const url = new URL(req.url);
     const daysParam = url.searchParams.get("days");
     const limitParam = url.searchParams.get("limit");
+    const testParam = (url.searchParams.get("test") ?? "").toLowerCase();
+    const isTest = testParam === "1" || testParam === "true";
 
     const fromBlob = await readLiveCaseStudiesFromBlob();
     const local = rawCaseStudies as unknown as CaseStudy[];
@@ -65,8 +68,8 @@ export async function GET(req: Request) {
         return b.date.localeCompare(a.date);
       });
     const isCron = (req.headers.get("x-vercel-cron") ?? "") === "1";
-    const days = daysParam ? Math.max(1, Math.min(60, Number(daysParam) || 0)) : isCron ? 7 : 0;
-    const limit = limitParam ? Math.max(1, Math.min(50, Number(limitParam) || 0)) : 10;
+    const days = daysParam ? Math.max(1, Math.min(60, Number(daysParam) || 0)) : isCron ? 1 : 0;
+    const limit = limitParam ? Math.max(1, Math.min(50, Number(limitParam) || 0)) : 20;
 
     const todayUtc = (() => {
       const now = new Date();
@@ -82,8 +85,48 @@ export async function GET(req: Request) {
     const { name, subject, html, text } = renderWeeklyDigestEmail({
       siteUrl,
       items,
-      title: days ? `Weekly email digest — last ${days} days` : "Weekly email digest — newest case studies",
+      title: days ? "How AI Agents Made Profits Today" : "Email digest — newest case studies",
+      subject: `How AI Agents Made Profits Today - ${items.length} Case Studies`,
     });
+
+    if (isTest) {
+      const to = (url.searchParams.get("to") ?? "").trim() || testToEnv;
+      if (!to) {
+        return NextResponse.json({ error: "Provide ?to= or set RESEND_TEST_TO for test sends." }, { status: 400 });
+      }
+
+      const res = await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${resendApiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          from,
+          to: [to],
+          subject,
+          html,
+          text,
+        }),
+      });
+
+      if (!res.ok) {
+        const body = await res.text().catch(() => "");
+        return NextResponse.json(
+          { error: "Resend test send failed.", providerStatus: res.status, providerBody: body.slice(0, 2000) },
+          { status: 502 },
+        );
+      }
+
+      const json = (await res.json()) as unknown;
+      return NextResponse.json({
+        ok: true,
+        test: true,
+        to,
+        items: items.map((c) => ({ id: c.id, date: c.date, title: c.title })),
+        resend: json,
+      });
+    }
 
     const segmentId = segmentIdEnv
       ? segmentIdEnv
