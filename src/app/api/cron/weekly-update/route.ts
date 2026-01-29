@@ -8,6 +8,8 @@ import {
   resendSendBroadcast,
 } from "@/lib/resendBroadcast";
 import { readLiveCaseStudiesFromBlob, writeLiveCaseStudiesToBlob } from "@/lib/blobCaseStudies";
+import { buildClaudeSystemPrompt, buildClaudeUserPrompt, buildDefaultScoutQuery, SCOUT_CONFIG_VERSION } from "@/lib/scoutConfig";
+import type { StageSource } from "@/lib/blobScoutAsync";
 
 export const runtime = "nodejs";
 
@@ -59,12 +61,31 @@ function isHttpUrl(url: string) {
   return /^https?:\/\//i.test(url);
 }
 
-const SOCIAL_HOSTS = new Set([
-  "facebook.com",
-  "x.com",
+// ============================================================================
+// Tiered Social Media Policy
+// ============================================================================
+
+/** Tier 1: Always allowed (primary/trusted platforms) */
+const TIER1_ALLOWED_HOSTS = new Set([
+  "youtube.com",
+  "youtu.be",
+  "github.com",
+  "indiehackers.com",
+  "devpost.com",
+  "kaggle.com",
+]);
+
+/** Tier 2: Allowed WITH corroboration (indie maker platforms) */
+const TIER2_CORROBORATION_HOSTS = new Set([
   "twitter.com",
-  "linkedin.com",
+  "x.com",
   "reddit.com",
+  "linkedin.com",
+]);
+
+/** Tier 3: Always blocked */
+const TIER3_BLOCKED_HOSTS = new Set([
+  "facebook.com",
   "tiktok.com",
   "instagram.com",
   "discord.com",
@@ -72,22 +93,146 @@ const SOCIAL_HOSTS = new Set([
   "telegram.me",
 ]);
 
-function isSocialUrl(url: string) {
+function getUrlHost(url: string): string {
+  try {
+    return new URL(url).hostname.toLowerCase();
+  } catch {
+    return "";
+  }
+}
+
+function hostMatches(host: string, hostSet: Set<string>): boolean {
+  if (hostSet.has(host)) return true;
+  for (const h of hostSet) {
+    if (host.endsWith(`.${h}`)) return true;
+  }
+  return false;
+}
+
+function isTier1Url(url: string): boolean {
+  return hostMatches(getUrlHost(url), TIER1_ALLOWED_HOSTS);
+}
+
+function isTier2Url(url: string): boolean {
+  return hostMatches(getUrlHost(url), TIER2_CORROBORATION_HOSTS);
+}
+
+function isTier3Url(url: string): boolean {
+  return hostMatches(getUrlHost(url), TIER3_BLOCKED_HOSTS);
+}
+
+function isXTwitterUrl(url: string): boolean {
+  const host = getUrlHost(url);
+  return host === "x.com" || host === "twitter.com" || host.endsWith(".x.com") || host.endsWith(".twitter.com");
+}
+
+
+function hasDollarAmount(s: string) {
+  // Support $1,234.56 and shorthand like $5k / $1.2M.
+  return /\$\s?\d[\d,]*(\.\d+)?\s?(?:[kKmMbB])?/g.test(s);
+}
+
+function extractFirstDollarToken(s: string) {
+  const m = s.match(/\$\s?\d[\d,]*(\.\d+)?\s?(?:[kKmMbB])?/);
+  if (!m) return "";
+  return m[0].replace(/\s+/g, " ").trim();
+}
+
+function extractFirstShorthandMoneyToken(s: string) {
+  // Matches "100k", "1.2m", "2B" (optionally with $ prefix).
+  const m = s.match(/\$?\s?\d+(?:\.\d+)?\s?(?:[kKmMbB])\b/);
+  if (!m) return "";
+  const raw = m[0].replace(/\s+/g, " ").trim();
+  return raw.startsWith("$") ? raw : `$${raw.replace(/^\$?\s?/, "")}`;
+}
+
+const MONEY_CONTEXT_DENY = [
+  "funding",
+  "raised",
+  "valuation",
+  "capex",
+  "market cap",
+  "secondary market",
+  "secondary markets",
+  "venture",
+  "series a",
+  "series b",
+  "series c",
+  "seed round",
+];
+
+function looksLikeFundingOrValuationContext(s: string) {
+  const t = s.toLowerCase();
+  return MONEY_CONTEXT_DENY.some((w) => t.includes(w));
+}
+
+function isAllowedPlatformUrl(url: string) {
+  return isTier1Url(url);
+}
+
+function likelySelfBlogUrl(url: string) {
   try {
     const u = new URL(url);
     const host = u.hostname.toLowerCase();
-    if (SOCIAL_HOSTS.has(host)) return true;
-    for (const h of SOCIAL_HOSTS) {
-      if (host.endsWith(`.${h}`)) return true;
-    }
+    const path = u.pathname.toLowerCase();
+    if (host === "medium.com" || host.endsWith(".medium.com")) return true;
+    if (host === "substack.com" || host.endsWith(".substack.com")) return true;
+    if (host.startsWith("blog.")) return true;
+    if (path.includes("/blog")) return true;
     return false;
   } catch {
     return false;
   }
 }
 
-function hasDollarAmount(s: string) {
-  return /\$\s?\d[\d,]*(\.\d+)?/g.test(s);
+function registrableDomain(hostname: string) {
+  const host = hostname.toLowerCase().replace(/\.+$/, "");
+  const parts = host.split(".").filter(Boolean);
+  if (parts.length <= 2) return host;
+
+  // Tiny eTLD+1 approximation for common multi-part TLDs we'll see.
+  const last2 = parts.slice(-2).join(".");
+  const last3 = parts.slice(-3).join(".");
+  const multi = new Set([
+    "co.uk",
+    "org.uk",
+    "gov.uk",
+    "ac.uk",
+    "com.au",
+    "net.au",
+    "org.au",
+    "edu.au",
+    "gov.au",
+    "co.nz",
+    "org.nz",
+    "gov.nz",
+    "ac.nz",
+  ]);
+  if (multi.has(last2) && parts.length >= 3) return last3;
+  return last2;
+}
+
+/**
+ * Check if a Tier 2 social source has corroboration from Tier 1 or non-social sources.
+ */
+function hasTier2Corroboration(
+  tier2Url: string,
+  allProofSources: ProofSource[],
+  grokStageUrls: Set<string>
+): boolean {
+  // X/Twitter URLs from Grok stage are auto-corroborated (native source)
+  if (isXTwitterUrl(tier2Url) && grokStageUrls.has(tier2Url)) {
+    return true;
+  }
+
+  // Check if there's at least one Tier 1 or non-social source
+  for (const source of allProofSources) {
+    if (source.url === tier2Url) continue;
+    if (isTier1Url(source.url)) return true;
+    if (!isTier2Url(source.url) && !isTier3Url(source.url)) return true;
+  }
+
+  return false;
 }
 
 function normalizeCaseStudyCandidate({
@@ -95,17 +240,23 @@ function normalizeCaseStudyCandidate({
   allowedUrls,
   fallbackDate,
   existingIds,
+  mode,
+  urlSnippetByUrl,
+  grokStageUrls,
 }: {
   cs: unknown;
   allowedUrls: Set<string>;
   fallbackDate: string;
   existingIds: Set<string>;
+  mode: "strict" | "speculation";
+  urlSnippetByUrl: Map<string, string>;
+  grokStageUrls: Set<string>;
 }): CaseStudy | null {
   if (!cs || typeof cs !== "object") return null;
   const obj = cs as Partial<CaseStudy>;
 
   const date = coerceIsoDate(obj.date, fallbackDate);
-  const title = typeof obj.title === "string" ? obj.title.trim() : "";
+  let title = typeof obj.title === "string" ? obj.title.trim() : "";
   const summary = typeof obj.summary === "string" ? obj.summary.trim() : "";
   const description = typeof obj.description === "string" ? obj.description.trim() : "";
   const profitMechanisms = Array.isArray(obj.profitMechanisms)
@@ -125,16 +276,127 @@ function normalizeCaseStudyCandidate({
     .filter((s) => s.label && s.url && isHttpUrl(s.url) && allowedUrls.has(s.url));
 
   let status = obj.status === "verified" || obj.status === "speculation" ? obj.status : "speculation";
+  const isSpeculationMode = mode === "speculation";
+  // In speculation mode, don't allow the model to "upgrade" items to verified unless they pass strict checks below.
+  if (isSpeculationMode) status = "speculation";
 
   if (!title || !summary || !description) return null;
-  if (!title.includes("$")) return null;
   // Allow 1-source speculation, but require 2+ sources for verified.
   if (status === "verified" && proofSources.length < 2) status = "speculation";
   if (proofSources.length < 1) return null;
-  // Disallow social-only sources (speculation still needs a non-social URL).
-  const nonSocial = proofSources.filter((s) => !isSocialUrl(s.url));
-  if (nonSocial.length < 1) return null;
-  if (!proofSources.some((s) => (s.excerpt ? hasDollarAmount(s.excerpt) : false))) return null;
+
+  // Apply tiered social policy:
+  // - Tier 3 (blocked) sources are filtered out
+  // - Tier 2 sources require corroboration
+  // - Tier 1 sources are always allowed
+  const filteredSources = proofSources.filter((s) => {
+    // Block Tier 3
+    if (isTier3Url(s.url)) return false;
+
+    // Tier 2 requires corroboration
+    if (isTier2Url(s.url)) {
+      return hasTier2Corroboration(s.url, proofSources, grokStageUrls);
+    }
+
+    return true;
+  });
+
+  // Need at least one non-Tier3 source
+  if (filteredSources.length < 1) return null;
+
+  // Require at least one Tier 1 or non-social source (unless all sources are corroborated Grok X sources)
+  const hasTier1OrNonSocial = filteredSources.some((s) => {
+    if (isTier1Url(s.url)) return true;
+    if (!isTier2Url(s.url) && !isTier3Url(s.url)) return true;
+    // Grok X sources are auto-allowed
+    if (isXTwitterUrl(s.url) && grokStageUrls.has(s.url)) return true;
+    return false;
+  });
+  if (!hasTier1OrNonSocial) return null;
+
+  // Use filtered sources going forward
+  const finalSources = filteredSources;
+
+  // If Claude didn't include an excerpt, backfill it from Perplexity's search snippet (same URL).
+  // This is especially important for speculation runs where Claude often omits `$` in excerpts.
+  for (const s of finalSources) {
+    if (s.excerpt && s.excerpt.trim()) continue;
+    const snippet = urlSnippetByUrl.get(s.url) ?? "";
+    if (snippet.trim()) s.excerpt = snippet.trim();
+  }
+
+  // Money evidence:
+  // - Strict/verified: require a verbatim excerpt containing "$"
+  // - Speculation mode: allow missing excerpt-$, but still require some money-like token in
+  //   title/summary/description OR a $ excerpt, and stronger corroboration when needed.
+  const excerptWithDollar = finalSources.find((s) => (s.excerpt ? hasDollarAmount(s.excerpt) : false));
+  const excerptDollarToken = excerptWithDollar?.excerpt ? extractFirstDollarToken(excerptWithDollar.excerpt) : "";
+  const textMoneyToken = extractFirstShorthandMoneyToken(`${title} ${summary} ${description}`);
+
+  // Exclude common "money-but-not-money-made" contexts (funding/valuation/capex, etc) when the money token
+  // is coming from an excerpt.
+  if (excerptWithDollar?.excerpt && looksLikeFundingOrValuationContext(excerptWithDollar.excerpt)) return null;
+
+  if (!isSpeculationMode) {
+    // strict mode
+    if (!excerptWithDollar?.excerpt) return null;
+  } else {
+    // speculation mode
+    const hasAnyMoneySignal = Boolean(excerptDollarToken || textMoneyToken);
+    if (!hasAnyMoneySignal) return null;
+    // If we don't have a verbatim $ excerpt, require stronger corroboration:
+    // either an allowed platform source OR 2+ distinct domains.
+    if (!excerptWithDollar?.excerpt) {
+      const domains = finalSources
+        .map((s) => {
+          try {
+            return registrableDomain(new URL(s.url).hostname);
+          } catch {
+            return "";
+          }
+        })
+        .filter(Boolean);
+      const uniqueDomains = new Set(domains);
+      const hasAllowedPlatform = finalSources.some((s) => isAllowedPlatformUrl(s.url));
+      // Also allow Grok X sources as corroboration
+      const hasGrokXSource = finalSources.some((s) => isXTwitterUrl(s.url) && grokStageUrls.has(s.url));
+      if (!hasAllowedPlatform && !hasGrokXSource && uniqueDomains.size < 2) return null;
+    }
+  }
+
+  // Auto-inject a $ amount into the title if missing.
+  if (!title.includes("$")) {
+    const token = excerptDollarToken || textMoneyToken;
+    if (token) title = `${title} — ${token}`;
+  }
+  if (!title.includes("$")) return null;
+
+  // If we DO have strong signals for verified, allow upgrading back to verified.
+  // (Keeps the dataset consistent with the original quality bar.)
+  if (isSpeculationMode) {
+    const canVerify = finalSources.length >= 2 && Boolean(excerptWithDollar?.excerpt);
+    if (canVerify) status = "verified";
+  }
+
+  // Self-blog policy: allow self blogs only when corroborated by an additional distinct-domain source.
+  // (IndieHackers / YouTube / GitHub count; otherwise any other non-social domain counts.)
+  const hasSelfBlog = finalSources.some((s) => likelySelfBlogUrl(s.url));
+  if (hasSelfBlog) {
+    const domains = finalSources
+      .map((s) => {
+        try {
+          return registrableDomain(new URL(s.url).hostname);
+        } catch {
+          return "";
+        }
+      })
+      .filter(Boolean);
+    const uniqueDomains = new Set(domains);
+    if (uniqueDomains.size < 2) return null;
+    // Additionally require corroboration by either an allowed platform OR another distinct domain (already ensured).
+    const corroborated = finalSources.some((s) => isAllowedPlatformUrl(s.url)) || uniqueDomains.size >= 2;
+    if (!corroborated) return null;
+  }
 
   let id = typeof obj.id === "string" ? obj.id.trim() : "";
   if (!id) id = `${date}-${slugify(title)}`;
@@ -157,21 +419,11 @@ function normalizeCaseStudyCandidate({
     description,
     profitMechanisms: profitMechanisms.length ? profitMechanisms : ["Unspecified (see proof sources)"],
     tags,
-    proofSources,
+    proofSources: finalSources,
     status,
   };
 }
 
-async function ensureDir(p: string) {
-  // No-op in Blob mode (kept for backwards compatibility if needed).
-  void p;
-}
-
-async function writeJsonFile(p: string, value: unknown) {
-  // No-op in Blob mode (kept for backwards compatibility if needed).
-  void p;
-  void value;
-}
 
 function formatMmDdYyyyUTC(d: Date) {
   const mm = String(d.getUTCMonth() + 1).padStart(2, "0");
@@ -259,7 +511,7 @@ async function callPerplexity({
   searchResults: Array<{ title?: string; url?: string; date?: string; snippet?: string }>;
   raw: unknown;
 }> {
-  const socialDeny = Array.from(SOCIAL_HOSTS).map((d) => `-${d}`);
+  const socialDeny = Array.from(TIER3_BLOCKED_HOSTS).map((d) => `-${d}`);
   const cutoffUtc = withinDays ? new Date(todayUtc.getTime() - withinDays * 86_400_000) : null;
 
   const schema = {
@@ -293,7 +545,7 @@ async function callPerplexity({
     "Prefer official pages, winners lists, public dashboards, or reputable reporting.",
     "Output MUST be valid JSON matching the provided schema.",
     "In sources[].snippet, include a VERBATIM quote that contains the $ amount.",
-    "Avoid social media sources (Facebook/X/Twitter/LinkedIn/Reddit/TikTok/Instagram/Discord/Telegram). YouTube is allowed.",
+    "Avoid social media sources (Facebook/TikTok/Instagram/Discord/Telegram). YouTube and X/Twitter indie maker posts are allowed.",
     `Return at most ${Math.max(5, Math.min(25, numSearchResults))} sources.`,
   ].join("\n");
 
@@ -326,7 +578,7 @@ async function callPerplexity({
             content: [
               "Find publicly verifiable examples of AI agents/agentic workflows that made money with explicit $ amounts.",
               "Exclude fundraising/valuations/grants.",
-              "Avoid social media sources as proof (Facebook/X/Twitter/LinkedIn/Reddit/TikTok/Instagram/Discord/Telegram). YouTube is allowed.",
+              "Avoid social media sources as proof (Facebook/TikTok/Instagram/Discord/Telegram). YouTube and X/Twitter indie maker posts are allowed.",
               `Return at most ${Math.max(5, Math.min(25, numSearchResults))} sources.`,
               "",
               `Query: ${query}`,
@@ -415,46 +667,18 @@ async function callClaudeHaiku({
   sources,
   perplexitySummary,
   maxItems,
+  mode,
 }: {
   apiKey: string;
-  sources: Array<{ title: string; url: string; date?: string; snippet?: string }>;
+  sources: Array<{ title: string; url: string; date?: string; snippet?: string; stageId?: string }>;
   perplexitySummary: string;
   maxItems: number;
+  mode: "strict" | "speculation";
 }): Promise<unknown[]> {
   const model = process.env.ANTHROPIC_MODEL ?? "claude-haiku-4-5";
 
-  const system = [
-    "You are an editor for AgentProfit.ai.",
-    "",
-    "STRICT RULES:",
-    "- Output must be a single JSON array ONLY (no markdown, no prose).",
-    "- Each entry MUST describe an AI agent or agentic workflow making money/profit with a specific $ amount.",
-    "- EXCLUDE fundraising/valuations/grants; those do NOT count as 'making money'.",
-    "- Prefer VERIFIED entries with 2+ proofSources.",
-    "- Speculation entries may have 1 proofSource (only if you cannot find a second credible source).",
-    "- Every proofSources.url MUST be taken EXACTLY from the provided sources list (do not invent links).",
-    "- At least one proofSources.excerpt MUST contain the $ amount and MUST be copied verbatim from a provided snippet (no paraphrasing in excerpts).",
-    "- Title MUST include a $ amount (include '$' character).",
-    "- If the sources/snippets are too thin to be confident, set status to 'speculation' and explicitly state the proof gap in the description.",
-    "- Do NOT use social media links (e.g. X/Twitter, Facebook, LinkedIn, Reddit, TikTok, Instagram, Discord, Telegram) as the only proof source. YouTube is allowed.",
-    "",
-    "CaseStudy schema:",
-    "{ id, date(YYYY-MM-DD), title, summary, description, profitMechanisms[], tags[], proofSources[{label,url,kind?,excerpt?}], status('verified'|'speculation') }",
-    "",
-    "Use short, neutral writing. Don't fabricate details not present in sources/snippets.",
-  ].join("\n");
-
-  const user = [
-    "Perplexity summary (may contain extra context; treat as secondary):",
-    perplexitySummary.slice(0, 6000),
-    "",
-    "Allowed sources (ONLY use these URLs):",
-    JSON.stringify(sources, null, 2),
-    "",
-    "Task:",
-    `- Produce up to ${maxItems} CaseStudy JSON objects that meet the strict rules.`,
-    "- Ensure each has 2+ proofSources from the allowed sources.",
-  ].join("\n");
+  const system = buildClaudeSystemPrompt({ mode });
+  const user = buildClaudeUserPrompt({ sources, perplexitySummary, maxItems, mode });
 
   const res = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
@@ -492,6 +716,10 @@ export type WeeklyUpdateOptions = {
   disableSend?: boolean;
   /** Default time window for accepting new case studies (used when query param is absent). */
   defaultWithinDays?: number;
+  /** Pre-aggregated sources from multi-stage pipeline (skips Perplexity call). */
+  preAggregatedSources?: StageSource[];
+  /** Pre-aggregated summary from multi-stage pipeline. */
+  preAggregatedSummary?: string;
 };
 
 export async function runWeeklyUpdate(req: Request, opts: WeeklyUpdateOptions = {}) {
@@ -514,7 +742,10 @@ export async function runWeeklyUpdate(req: Request, opts: WeeklyUpdateOptions = 
 
   const perplexityKey = process.env.PERPLEXITY_API_KEY ?? "";
   const anthropicKey = process.env.ANTHROPIC_API_KEY ?? "";
-  if (!perplexityKey) return NextResponse.json({ error: "PERPLEXITY_API_KEY is missing." }, { status: 500 });
+  // Only require Perplexity key if we don't have pre-aggregated sources
+  if (!perplexityKey && !opts.preAggregatedSources) {
+    return NextResponse.json({ error: "PERPLEXITY_API_KEY is missing." }, { status: 500 });
+  }
   if (!anthropicKey) return NextResponse.json({ error: "ANTHROPIC_API_KEY is missing." }, { status: 500 });
 
   const siteUrl = process.env.SITE_URL ?? "https://agentprofit.ai";
@@ -543,10 +774,12 @@ export async function runWeeklyUpdate(req: Request, opts: WeeklyUpdateOptions = 
     ? (recencyParam as "day" | "week" | "month" | "year")
     : "week";
   const queryParam = url.searchParams.get("query") ?? url.searchParams.get("q") ?? "";
+  const modeParam = (url.searchParams.get("mode") ?? "").trim().toLowerCase();
+  const mode: "strict" | "speculation" = modeParam === "strict" ? "strict" : "speculation";
   const withinDaysParam = url.searchParams.get("withinDays") ?? url.searchParams.get("days") ?? "";
   const withinDays =
     withinDaysParam.trim() !== ""
-      ? Math.max(1, Math.min(60, Number(withinDaysParam) || 0))
+      ? Math.max(0, Math.min(60, Number(withinDaysParam) || 0))
       : Math.max(0, Math.min(60, opts.defaultWithinDays ?? (isCron ? 7 : 0)));
   const todayUtc = (() => {
     const now = new Date();
@@ -560,77 +793,117 @@ export async function runWeeklyUpdate(req: Request, opts: WeeklyUpdateOptions = 
   try {
     const query =
       (queryParam || "").trim().slice(0, 600) ||
-      "Find AI agents or agentic workflows that made money in the last 7 days. Only include items with explicit dollar amounts (e.g., prizes, bounties, revenue/MRR) and public sources.";
+      buildDefaultScoutQuery({ windowDays: withinDays || (isCron ? 7 : 7) });
 
-    const pplxAsyncRequestId = (url.searchParams.get("pplxAsyncRequestId") ?? "").trim();
-    let p: Awaited<ReturnType<typeof callPerplexity>>;
-    if (pplxAsyncRequestId) {
-      const job = await fetchPerplexityAsyncJob({ apiKey: perplexityKey, requestId: pplxAsyncRequestId });
-      if (job.status !== "COMPLETED") {
-        if (job.status === "FAILED") {
+    let sources: Array<{ title: string; url: string; date?: string; snippet?: string; stageId?: string }>;
+    let pContent: string;
+    let pModel: string;
+    let pCitations: string[];
+    let pRaw: unknown;
+
+    // Use pre-aggregated sources if provided (from multi-stage pipeline)
+    if (opts.preAggregatedSources && opts.preAggregatedSources.length > 0) {
+      sources = opts.preAggregatedSources
+        .filter((r) => r.title && r.url && isHttpUrl(r.url))
+        .filter((r) => {
+          if (!withinDays) return true;
+          if (!r.date) return true;
+          const t = new Date(`${r.date}T00:00:00Z`).getTime();
+          return Number.isFinite(t) ? t >= cutoffMs : true;
+        })
+        .slice(0, limit);
+      pContent = opts.preAggregatedSummary ?? "";
+      pModel = "multi-stage";
+      pCitations = sources.map((s) => s.url);
+      pRaw = { preAggregated: true, sourceCount: opts.preAggregatedSources.length };
+    } else {
+      // Legacy: use Perplexity async or direct call
+      const pplxAsyncRequestId = (url.searchParams.get("pplxAsyncRequestId") ?? "").trim();
+      let p: Awaited<ReturnType<typeof callPerplexity>>;
+      if (pplxAsyncRequestId) {
+        const job = await fetchPerplexityAsyncJob({ apiKey: perplexityKey, requestId: pplxAsyncRequestId });
+        if (job.status !== "COMPLETED") {
+          if (job.status === "FAILED") {
+            return NextResponse.json(
+              {
+                error: "Perplexity async job failed.",
+                requestId: pplxAsyncRequestId,
+                status: job.status,
+                details: (job.error_message ?? "").trim() || "unknown error",
+              },
+              { status: 502 },
+            );
+          }
           return NextResponse.json(
-            {
-              error: "Perplexity async job failed.",
-              requestId: pplxAsyncRequestId,
-              status: job.status,
-              details: (job.error_message ?? "").trim() || "unknown error",
-            },
-            { status: 502 },
+            { ok: true, pending: true, requestId: pplxAsyncRequestId, status: job.status, runId },
+            { status: 202 },
           );
         }
-        return NextResponse.json(
-          { ok: true, pending: true, requestId: pplxAsyncRequestId, status: job.status, runId },
-          { status: 202 },
-        );
+
+        const resp = job.response ?? {};
+        const content = String(resp?.choices?.[0]?.message?.content ?? "");
+        const searchResults = Array.isArray(resp?.search_results) ? (resp.search_results as any[]) : [];
+        const citations = Array.isArray(resp?.citations)
+          ? (resp.citations as any[]).map(String).filter(Boolean)
+          : searchResults.map((s) => String((s as any)?.url ?? "")).filter(Boolean);
+        p = {
+          model: String(resp?.model ?? job.model ?? "sonar-deep-research"),
+          content,
+          citations,
+          searchResults,
+          raw: job,
+        };
+      } else {
+        p = await callPerplexity({
+          apiKey: perplexityKey,
+          query,
+          recency,
+          numSearchResults: Math.max(10, limit),
+          withinDays,
+          todayUtc,
+        });
       }
 
-      const resp = job.response ?? {};
-      const content = String(resp?.choices?.[0]?.message?.content ?? "");
-      const searchResults = Array.isArray(resp?.search_results) ? (resp.search_results as any[]) : [];
-      const citations = Array.isArray(resp?.citations)
-        ? (resp.citations as any[]).map(String).filter(Boolean)
-        : searchResults.map((s) => String((s as any)?.url ?? "")).filter(Boolean);
-      p = {
-        model: String(resp?.model ?? job.model ?? "sonar-deep-research"),
-        content,
-        citations,
-        searchResults,
-        raw: job,
-      };
-    } else {
-      p = await callPerplexity({
-        apiKey: perplexityKey,
-        query,
-        recency,
-        numSearchResults: Math.max(10, limit),
-        withinDays,
-        todayUtc,
-      });
+      sources = (Array.isArray(p.searchResults) ? p.searchResults : [])
+        .map((r) => ({
+          title: String(r?.title ?? "").trim(),
+          url: String(r?.url ?? "").trim(),
+          date: typeof r?.date === "string" ? r.date : undefined,
+          snippet: typeof r?.snippet === "string" ? r.snippet : undefined,
+          stageId: undefined,
+        }))
+        .filter((r) => r.title && r.url && isHttpUrl(r.url))
+        .filter((r) => {
+          if (!withinDays) return true;
+          if (!r.date) return true;
+          const t = new Date(`${r.date}T00:00:00Z`).getTime();
+          return Number.isFinite(t) ? t >= cutoffMs : true;
+        })
+        .slice(0, limit);
+      pContent = p.content;
+      pModel = p.model ?? "";
+      pCitations = p.citations;
+      pRaw = p.raw;
     }
 
-    const sources = (Array.isArray(p.searchResults) ? p.searchResults : [])
-      .map((r) => ({
-        title: String(r?.title ?? "").trim(),
-        url: String(r?.url ?? "").trim(),
-        date: typeof r?.date === "string" ? r.date : undefined,
-        snippet: typeof r?.snippet === "string" ? r.snippet : undefined,
-      }))
-      .filter((r) => r.title && r.url && isHttpUrl(r.url))
-      .filter((r) => {
-        if (!withinDays) return true;
-        if (!r.date) return true;
-        const t = new Date(`${r.date}T00:00:00Z`).getTime();
-        return Number.isFinite(t) ? t >= cutoffMs : true;
-      })
-      .slice(0, limit);
-
     const allowedUrls = new Set(sources.map((s) => s.url));
+    const urlSnippetByUrl = new Map(
+      sources
+        .map((s) => [s.url, (s.snippet ?? "").trim()] as const)
+        .filter(([, snippet]) => Boolean(snippet)),
+    );
+
+    // Track which URLs came from Grok X Search stage (auto-allowed X/Twitter)
+    const grokStageUrls = new Set(
+      sources.filter((s) => s.stageId === "grok-x-search").map((s) => s.url)
+    );
 
     const claudeCandidates = await callClaudeHaiku({
       apiKey: anthropicKey,
       sources,
-      perplexitySummary: p.content,
+      perplexitySummary: pContent,
       maxItems: find,
+      mode,
     });
 
     const fromBlob = await readLiveCaseStudiesFromBlob();
@@ -639,9 +912,12 @@ export async function runWeeklyUpdate(req: Request, opts: WeeklyUpdateOptions = 
     const existingIds = new Set(existing.map((x) => x.id));
     const existingUrls = new Set(existing.flatMap((x) => (x.proofSources ?? []).map((s) => s.url)));
 
+    // Rank candidates: prioritize verified, then by stage priority
     const candidateRank = (x: unknown) => {
       const s = (x as any)?.status;
-      return s === "verified" ? 0 : 1;
+      const verified = s === "verified" ? 0 : 1;
+      // Could add stage weight here if needed
+      return verified;
     };
     const orderedCandidates = claudeCandidates.slice().sort((a, b) => candidateRank(a) - candidateRank(b));
 
@@ -653,6 +929,9 @@ export async function runWeeklyUpdate(req: Request, opts: WeeklyUpdateOptions = 
         allowedUrls,
         fallbackDate: runDate,
         existingIds,
+        mode,
+        urlSnippetByUrl,
+        grokStageUrls,
       });
       if (!cs) continue;
       if (withinDays) {
@@ -671,11 +950,20 @@ export async function runWeeklyUpdate(req: Request, opts: WeeklyUpdateOptions = 
       runDate,
       runId,
       forced: force,
+      scout: {
+        configVersion: SCOUT_CONFIG_VERSION,
+        mode,
+        withinDays,
+        searchLimit: limit,
+        find,
+        recency,
+        multiStage: Boolean(opts.preAggregatedSources),
+      },
       perplexity: {
-        model: p.model,
-        citations: p.citations,
+        model: pModel,
+        citations: pCitations,
         searchResults: sources,
-        content: p.content,
+        content: pContent,
       },
       generated: {
         candidateCount: claudeCandidates.length,
@@ -684,12 +972,12 @@ export async function runWeeklyUpdate(req: Request, opts: WeeklyUpdateOptions = 
       },
     };
 
-    // Persist “live” dataset to Blob (snapshot + stable manifest).
+    // Persist "live" dataset to Blob (snapshot + stable manifest).
     const blobWrite = await writeLiveCaseStudiesToBlob({
       runId,
       all: merged,
       added,
-      perplexityRaw: p.raw,
+      perplexityRaw: pRaw,
       claudeRaw: claudeCandidates,
       runLog,
     });
@@ -755,4 +1043,3 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   return runWeeklyUpdate(req);
 }
-
