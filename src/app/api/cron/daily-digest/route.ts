@@ -5,8 +5,7 @@ import { readLiveCaseStudiesFromBlob } from "@/lib/blobCaseStudies";
 import { renderWeeklyDigestEmail } from "@/lib/newsletterDigest";
 import {
   resendCreateBroadcast,
-  resendGetOrCreateSegmentId,
-  resendGetOrCreateWeeklySegmentId,
+  resendGetOrCreateDailySegmentId,
   resendSendBroadcast,
 } from "@/lib/resendBroadcast";
 
@@ -35,7 +34,7 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const enabled = (process.env.WEEKLY_DIGEST_ENABLED ?? "true").toLowerCase() === "true";
+  const enabled = (process.env.DAILY_DIGEST_ENABLED ?? "true").toLowerCase() === "true";
   if (!enabled) {
     return NextResponse.json({ ok: true, skipped: true, reason: "disabled" });
   }
@@ -48,9 +47,6 @@ export async function GET(req: Request) {
   const siteUrl = process.env.SITE_URL ?? "https://agentprofit.ai";
   const from = process.env.RESEND_FROM ?? "AgentProfit <onboarding@resend.dev>";
   const testToEnv = process.env.RESEND_TEST_TO ?? "";
-  // Legacy segment support for backwards compatibility
-  const legacySegmentIdEnv = process.env.RESEND_NEWSLETTER_SEGMENT_ID ?? "";
-  const legacySegmentName = process.env.RESEND_NEWSLETTER_SEGMENT_NAME ?? "AgentProfit Newsletter";
 
   try {
     const url = new URL(req.url);
@@ -70,6 +66,7 @@ export async function GET(req: Request) {
         return b.date.localeCompare(a.date);
       });
     const isCron = (req.headers.get("x-vercel-cron") ?? "") === "1";
+    // Daily digest defaults to 1 day lookback
     const days = daysParam ? Math.max(1, Math.min(60, Number(daysParam) || 0)) : isCron ? 1 : 0;
     const limit = limitParam ? Math.max(1, Math.min(50, Number(limitParam) || 0)) : 20;
 
@@ -84,11 +81,16 @@ export async function GET(req: Request) {
       : all.filter((cs) => new Date(`${cs.date}T00:00:00Z`).getTime() >= cutoff.getTime());
     const items = selected.slice(0, limit);
 
+    // Skip sending if no new case studies
+    if (items.length === 0 && isCron) {
+      return NextResponse.json({ ok: true, skipped: true, reason: "no_new_items" });
+    }
+
     const { name, subject, html, text } = renderWeeklyDigestEmail({
       siteUrl,
       items,
-      title: days ? "How AI Agents Made Profits Today" : "Email digest — newest case studies",
-      subject: `How AI Agents Made Profits Today - ${items.length} Case Studies`,
+      title: "AgentProfit Daily",
+      subject: `AgentProfit Daily: ${items.length} new case ${items.length === 1 ? "study" : "studies"}`,
     });
 
     if (isTest) {
@@ -130,50 +132,23 @@ export async function GET(req: Request) {
       });
     }
 
-    // Send to both the new weekly segment AND legacy segment (for backwards compatibility)
-    const weeklySegmentId = await resendGetOrCreateWeeklySegmentId(resendApiKey);
-    const legacySegmentId = legacySegmentIdEnv
-      ? legacySegmentIdEnv
-      : await resendGetOrCreateSegmentId({
-          apiKey: resendApiKey,
-          segmentName: legacySegmentName,
-        });
+    const segmentId = await resendGetOrCreateDailySegmentId(resendApiKey);
 
-    // Send to weekly segment (new subscribers)
-    const weeklyBroadcastId = await resendCreateBroadcast({
+    const broadcastId = await resendCreateBroadcast({
       apiKey: resendApiKey,
-      segmentId: weeklySegmentId,
+      segmentId,
       from,
       subject,
       html,
       text,
-      name: `${name} (Weekly)`,
+      name,
     });
-    const weeklySendResult = await resendSendBroadcast({ apiKey: resendApiKey, broadcastId: weeklyBroadcastId });
-
-    // Send to legacy segment (existing subscribers) if it differs from weekly segment
-    let legacySendResult: unknown = null;
-    let legacyBroadcastId: string | null = null;
-    if (legacySegmentId !== weeklySegmentId) {
-      legacyBroadcastId = await resendCreateBroadcast({
-        apiKey: resendApiKey,
-        segmentId: legacySegmentId,
-        from,
-        subject,
-        html,
-        text,
-        name: `${name} (Legacy)`,
-      });
-      legacySendResult = await resendSendBroadcast({ apiKey: resendApiKey, broadcastId: legacyBroadcastId });
-    }
+    const sendResult = await resendSendBroadcast({ apiKey: resendApiKey, broadcastId });
 
     return NextResponse.json({
       ok: true,
       items: items.map((c) => ({ id: c.id, date: c.date, title: c.title })),
-      resend: {
-        weekly: { segmentId: weeklySegmentId, broadcastId: weeklyBroadcastId, send: weeklySendResult },
-        legacy: legacyBroadcastId ? { segmentId: legacySegmentId, broadcastId: legacyBroadcastId, send: legacySendResult } : null,
-      },
+      resend: { segmentId, broadcastId, send: sendResult },
     });
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Unknown error";
@@ -181,7 +156,7 @@ export async function GET(req: Request) {
       return NextResponse.json(
         {
           error:
-            "Your RESEND_API_KEY is restricted to sending-only. Weekly broadcasts require a full-access Resend API key (Segments/Broadcasts).",
+            "Your RESEND_API_KEY is restricted to sending-only. Daily broadcasts require a full-access Resend API key (Segments/Broadcasts).",
           providerStatus: 401,
           providerBody: msg,
         },
@@ -189,7 +164,7 @@ export async function GET(req: Request) {
       );
     }
     return NextResponse.json(
-      { error: "Failed to send weekly digest.", providerStatus: 500, providerBody: msg },
+      { error: "Failed to send daily digest.", providerStatus: 500, providerBody: msg },
       { status: 502 },
     );
   }
@@ -199,4 +174,3 @@ export async function POST(req: Request) {
   // Support POST for manual triggering tools.
   return GET(req);
 }
-

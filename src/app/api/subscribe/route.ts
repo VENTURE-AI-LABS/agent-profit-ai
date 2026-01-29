@@ -1,10 +1,15 @@
 import { NextResponse } from "next/server";
+import {
+  resendGetOrCreateDailySegmentId,
+  resendGetOrCreateWeeklySegmentId,
+} from "@/lib/resendBroadcast";
 
 function isEmail(email: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
 type Provider = "buttondown" | "beehiiv" | "resend" | "none";
+type Frequency = "daily" | "weekly";
 
 function getProvider(): Provider {
   const raw = (process.env.NEWSLETTER_PROVIDER ?? "none").toLowerCase();
@@ -16,9 +21,13 @@ function getProvider(): Provider {
 
 export async function POST(req: Request) {
   let email = "";
+  let frequency: Frequency = "weekly";
   try {
-    const body = (await req.json()) as { email?: unknown };
+    const body = (await req.json()) as { email?: unknown; frequency?: unknown };
     email = typeof body.email === "string" ? body.email.trim() : "";
+    if (body.frequency === "daily" || body.frequency === "weekly") {
+      frequency = body.frequency;
+    }
   } catch {
     return NextResponse.json({ error: "Invalid JSON body." }, { status: 400 });
   }
@@ -137,53 +146,13 @@ export async function POST(req: Request) {
       );
     }
 
-    const segmentIdEnv = process.env.RESEND_NEWSLETTER_SEGMENT_ID ?? "";
-    const segmentName = process.env.RESEND_NEWSLETTER_SEGMENT_NAME ?? "AgentProfit Newsletter";
-
-    async function getOrCreateSegmentId() {
-      if (segmentIdEnv) return segmentIdEnv;
-
-      const listRes = await fetch("https://api.resend.com/segments", {
-        headers: { Authorization: `Bearer ${apiKey}` },
-      });
-      if (!listRes.ok) {
-        const text = await listRes.text().catch(() => "");
-        throw new Error(
-          `Resend list segments failed: ${listRes.status} ${text.slice(0, 500)}`,
-        );
-      }
-      const listJson = (await listRes.json()) as {
-        data?: Array<{ id: string; name: string }>;
-      };
-      const segments = Array.isArray(listJson.data) ? listJson.data : [];
-      const existing = segments.find(
-        (s) => (s.name ?? "").toLowerCase() === segmentName.toLowerCase(),
-      );
-      if (existing?.id) return existing.id;
-
-      const createRes = await fetch("https://api.resend.com/segments", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ name: segmentName }),
-      });
-      if (!createRes.ok) {
-        const text = await createRes.text().catch(() => "");
-        throw new Error(
-          `Resend create segment failed: ${createRes.status} ${text.slice(0, 500)}`,
-        );
-      }
-      const createJson = (await createRes.json()) as { id?: string };
-      if (!createJson.id) throw new Error("Resend create segment returned no id.");
-      return createJson.id;
-    }
-
     try {
-      const segmentId = await getOrCreateSegmentId();
+      const segmentId =
+        frequency === "daily"
+          ? await resendGetOrCreateDailySegmentId(apiKey)
+          : await resendGetOrCreateWeeklySegmentId(apiKey);
 
-      // Create (or update) contact and add to our newsletter segment.
+      // Create (or update) contact and add to the frequency-based segment.
       // Resend uses global contacts; passing `segments` adds membership.
       const res = await fetch("https://api.resend.com/contacts", {
         method: "POST",
@@ -210,7 +179,7 @@ export async function POST(req: Request) {
         );
       }
 
-      return NextResponse.json({ ok: true });
+      return NextResponse.json({ ok: true, frequency });
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Unknown error";
       if (msg.includes("restricted_api_key")) {

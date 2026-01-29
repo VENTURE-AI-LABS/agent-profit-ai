@@ -43,6 +43,25 @@ export async function resendGetOrCreateSegmentId({
   return createJson.id;
 }
 
+const DEFAULT_DAILY_SEGMENT_NAME = "AgentProfit Daily";
+const DEFAULT_WEEKLY_SEGMENT_NAME = "AgentProfit Weekly";
+
+export async function resendGetOrCreateDailySegmentId(apiKey: string): Promise<string> {
+  const envId = process.env.RESEND_DAILY_SEGMENT_ID ?? "";
+  if (envId) return envId;
+
+  const segmentName = process.env.RESEND_DAILY_SEGMENT_NAME ?? DEFAULT_DAILY_SEGMENT_NAME;
+  return resendGetOrCreateSegmentId({ apiKey, segmentName });
+}
+
+export async function resendGetOrCreateWeeklySegmentId(apiKey: string): Promise<string> {
+  const envId = process.env.RESEND_WEEKLY_SEGMENT_ID ?? "";
+  if (envId) return envId;
+
+  const segmentName = process.env.RESEND_WEEKLY_SEGMENT_NAME ?? DEFAULT_WEEKLY_SEGMENT_NAME;
+  return resendGetOrCreateSegmentId({ apiKey, segmentName });
+}
+
 export async function resendCreateBroadcast({
   apiKey,
   segmentId,
