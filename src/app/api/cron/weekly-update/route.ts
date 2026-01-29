@@ -273,7 +273,17 @@ function normalizeCaseStudyCandidate({
       kind: s.kind,
       excerpt: typeof s.excerpt === "string" ? s.excerpt.trim() : undefined,
     }))
-    .filter((s) => s.label && s.url && isHttpUrl(s.url) && allowedUrls.has(s.url));
+    .filter((s) => {
+      if (!s.label || !s.url || !isHttpUrl(s.url)) return false;
+      // Always allow URLs from the provided sources
+      if (allowedUrls.has(s.url)) return true;
+      // Allow product URLs (non-social) that Claude extracted from context
+      // These are typically the actual product websites mentioned in tweets
+      if (s.kind === "website") return true;
+      // Allow any non-social URL as potential product link
+      if (!isTier2Url(s.url) && !isTier3Url(s.url) && !isXTwitterUrl(s.url)) return true;
+      return false;
+    });
 
   let status = obj.status === "verified" || obj.status === "speculation" ? obj.status : "speculation";
   const isSpeculationMode = mode === "speculation";

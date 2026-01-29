@@ -140,10 +140,18 @@ export function buildClaudeSystemPrompt({ mode }: { mode: ScoutMode }) {
     '- Revenue: "generated $X", "made $X", "earned $X", "sold for $X"',
     '- Milestone: "hit $Xk", "crossed $X", "reached $X MRR"',
     "",
+    "PRODUCT LINK EXTRACTION (IMPORTANT):",
+    "- Look for product/project URLs in the source snippets (e.g., myproduct.com, myapp.ai)",
+    "- If a product name is mentioned, include it in the title and description",
+    "- Add product website as a proofSource with kind='website' when found",
+    "- Describe what the AI product/agent actually DOES in the description",
+    "- Example: 'ArcStory.ai is an AI-powered storytelling app that...'",
+    "",
     "X/TWITTER SOURCE HANDLING:",
     "- X/Twitter posts from Grok search are allowed as proof sources",
     "- Individual creator posts (indie makers) are more valuable than company announcements",
     "- Look for specific usernames/handles when extracting from X posts",
+    "- Extract product URLs mentioned in tweets and add them as separate proofSources",
   ].join("\n");
 
   if (mode === "strict") {
@@ -228,7 +236,7 @@ export function buildClaudeUserPrompt({
     "Research summary (may contain extra context; treat as secondary):",
     perplexitySummary.slice(0, 6000),
     "",
-    "Allowed sources (ONLY use these URLs):",
+    "Allowed sources (ONLY use these URLs, plus any product URLs mentioned in snippets):",
     sourcesText,
     "",
     "Task:",
@@ -236,5 +244,11 @@ export function buildClaudeUserPrompt({
     modeHint,
     "- Prioritize indie/solo maker stories with clear $ amounts.",
     "- X/Twitter sources from the grok-x-search stage are allowed as proof.",
+    "",
+    "IMPORTANT - Product Links:",
+    "- If a product URL is mentioned in any snippet (e.g., 'check out myapp.ai'), add it as a proofSource with kind='product'",
+    "- In the description, explain what the product/AI agent actually DOES",
+    "- Include the product name in the title when known",
+    "- Product URLs don't need to be in the allowed sources list - extract them from snippets",
   ].join("\n");
 }
