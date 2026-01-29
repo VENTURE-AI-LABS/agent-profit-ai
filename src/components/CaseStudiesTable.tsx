@@ -266,7 +266,7 @@ export default function CaseStudiesTable({
                         <MoneyText text={cs.summary} />
                       </div>
                       {!!cs.tags?.length && (
-                        <div className="mt-2 flex flex-wrap gap-2">
+                        <div className="mt-2 hidden flex-wrap gap-2 sm:flex">
                           {cs.tags.slice(0, 8).map((t) => (
                             <span key={t} className={pillClasses()}>
                               {t}

@@ -84,6 +84,10 @@ export function renderWeeklyDigestEmail({
         </p>
 
         <p style="margin: 18px 0 0 0; font-size: 12px; color: #64748b;">
+          <a href="${siteUrl}/preferences" style="color: #64748b; text-decoration: underline; text-underline-offset: 2px;">
+            Manage preferences
+          </a>
+          &nbsp;&middot;&nbsp;
           <a href="{{{RESEND_UNSUBSCRIBE_URL}}}" style="color: #64748b; text-decoration: underline; text-underline-offset: 2px;">
             Unsubscribe
           </a>

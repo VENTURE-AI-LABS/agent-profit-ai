@@ -16,18 +16,18 @@ export default async function Home() {
       <main className="mx-auto flex w-full max-w-none flex-col gap-10 px-6 py-12">
         <header className="grid gap-6 lg:grid-cols-[1fr_560px] lg:items-start">
           <div className="flex flex-col gap-4">
-            <div className="flex flex-col gap-2">
-              <div className="flex items-center gap-3">
+            <div className="flex flex-col items-center gap-2 sm:items-start">
+              <div className="flex flex-col items-center gap-2 sm:flex-row sm:gap-3">
                 <img
-                  src="/icon.svg"
+                  src="/robot-cash-transparent.png"
                   alt="AgentProfit.ai logo"
-                  className="block h-12 w-12 shrink-0 translate-y-[-4px] sm:h-14 sm:w-14"
+                  className="block h-16 w-auto shrink-0 sm:h-20 md:h-28"
                 />
-                <div className="leading-none text-4xl font-black tracking-tight text-emerald-700 dark:text-emerald-400 sm:text-5xl">
+                <div className="leading-none text-[36px] font-black tracking-tight text-emerald-700 dark:text-emerald-400 sm:text-[48px] md:text-[65px]">
                   AgentProfit.ai
                 </div>
               </div>
-              <h1 className="text-2xl font-semibold tracking-tight text-zinc-800 dark:text-zinc-100 sm:text-3xl">
+              <h1 className="text-center text-xl font-semibold tracking-tight text-zinc-800 dark:text-zinc-100 sm:text-left sm:text-2xl md:text-3xl">
                 How AI agents make money — documented case studies.
               </h1>
             </div>
