@@ -9,7 +9,7 @@ export const SCOUT_CONFIG_VERSION = 2 as const;
 /**
  * Research stage provider type.
  */
-export type ResearchProvider = "perplexity" | "grok";
+export type ResearchProvider = "perplexity" | "grok" | "youtube";
 
 /**
  * A single research stage in the multi-stage pipeline.
@@ -43,11 +43,19 @@ export const DEFAULT_RESEARCH_STAGES: ResearchStage[] = [
     enabled: true,
   },
   {
+    stageId: "youtube-podcasts",
+    provider: "youtube",
+    label: "Podcast Interviews",
+    queryFocus: "AI agent revenue interview indie hacker podcast MRR",
+    priority: 2,
+    enabled: true,
+  },
+  {
     stageId: "hackathon",
     provider: "perplexity",
     label: "Contest Winners",
     queryFocus: "hackathon winner prize bounty AI agent autonomous",
-    priority: 2,
+    priority: 3,
     enabled: true,
   },
   {
@@ -55,7 +63,7 @@ export const DEFAULT_RESEARCH_STAGES: ResearchStage[] = [
     provider: "perplexity",
     label: "Indie Makers",
     queryFocus: "indie maker revenue milestone MRR AI agent solo founder",
-    priority: 3,
+    priority: 4,
     enabled: true,
   },
   {
@@ -63,7 +71,7 @@ export const DEFAULT_RESEARCH_STAGES: ResearchStage[] = [
     provider: "perplexity",
     label: "Creator Content",
     queryFocus: "AI agent case study tutorial revenue YouTube",
-    priority: 4,
+    priority: 5,
     enabled: true,
   },
   {
@@ -71,7 +79,7 @@ export const DEFAULT_RESEARCH_STAGES: ResearchStage[] = [
     provider: "perplexity",
     label: "Tech News",
     queryFocus: "autonomous agent revenue news profit AI",
-    priority: 5,
+    priority: 6,
     enabled: true,
   },
 ];
@@ -152,6 +160,15 @@ export function buildClaudeSystemPrompt({ mode }: { mode: ScoutMode }) {
     "- Individual creator posts (indie makers) are more valuable than company announcements",
     "- Look for specific usernames/handles when extracting from X posts",
     "- Extract product URLs mentioned in tweets and add them as separate proofSources",
+    "",
+    "YOUTUBE PODCAST SOURCE HANDLING (CRITICAL):",
+    "- YouTube podcast snippets contain '| Mentioned: ProductName1, ProductName2' with extracted product names",
+    "- YouTube snippets may also contain '| Product links: url1, url2' with extracted URLs",
+    "- For EACH YouTube source, you MUST add product website proofSources when product names are mentioned",
+    "- Construct standard URLs from product names: 'Nomad List' → nomadlist.com, 'Photo AI' → photoai.com",
+    "- Add these as proofSources with kind='product' even if not explicitly in the source list",
+    "- The description MUST explain what each mentioned product does (AI-powered X that Y)",
+    "- Example: If snippet says 'Mentioned: Nomad List, Photo AI', add proofSources for nomadlist.com and photoai.com",
   ].join("\n");
 
   if (mode === "strict") {
@@ -199,6 +216,28 @@ export function buildClaudeSystemPrompt({ mode }: { mode: ScoutMode }) {
     "",
     "Use short, neutral writing. Don't fabricate details not present in sources/snippets.",
   ].join("\n");
+}
+
+/**
+ * Build YouTube search queries for finding podcast interviews with revenue mentions.
+ * Returns multiple queries to cover different podcast sources and topics.
+ */
+export function buildYouTubeSearchQueries(): string[] {
+  return [
+    // Specific podcast channels known for indie/AI content
+    "Indie Hackers AI agent revenue interview",
+    "My First Million AI startup money",
+    "Starter Story founder revenue AI",
+    "Lex Fridman AI agent interview",
+    "All-In Podcast AI agent",
+    "TWIML AI agent business",
+    // Generic searches for revenue-focused AI content
+    "AI agent made money interview",
+    "indie hacker revenue MRR AI",
+    "solo founder AI agent profit",
+    "AI startup revenue podcast",
+    "autonomous agent business interview",
+  ];
 }
 
 export function buildClaudeUserPrompt({

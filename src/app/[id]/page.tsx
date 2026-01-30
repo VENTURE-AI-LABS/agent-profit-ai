@@ -5,6 +5,8 @@ import rawCaseStudies from "@/data/case-studies.json";
 import type { CaseStudy } from "@/lib/types";
 import { readLiveCaseStudiesFromBlob } from "@/lib/blobCaseStudies";
 import MoneyText from "@/components/MoneyText";
+import MediaEmbed from "@/components/MediaEmbed";
+import { isEmbeddableUrl } from "@/lib/mediaUtils";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -86,6 +88,23 @@ export default async function CaseStudyPage({
             <div className="mt-3 whitespace-pre-wrap rounded-2xl border border-zinc-200 bg-white p-5 text-sm leading-6 text-zinc-800 shadow-sm dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-200">
               <MoneyText text={cs.description} />
             </div>
+
+            {/* Embedded media (YouTube videos, tweets) */}
+            {cs.proofSources?.some((s) => isEmbeddableUrl(s.url)) && (
+              <div className="mt-8">
+                <div className="text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+                  Media
+                </div>
+                <div className="mt-3 space-y-4">
+                  {cs.proofSources
+                    .filter((s) => isEmbeddableUrl(s.url))
+                    .slice(0, 3) // Max 3 embeds
+                    .map((s) => (
+                      <MediaEmbed key={s.url} url={s.url} label={s.label} />
+                    ))}
+                </div>
+              </div>
+            )}
 
             {!!cs.profitMechanisms?.length && (
               <div className="mt-8">

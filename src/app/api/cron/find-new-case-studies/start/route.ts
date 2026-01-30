@@ -8,11 +8,13 @@ import {
 import {
   buildDefaultScoutQuery,
   buildGrokXSearchQuery,
+  buildYouTubeSearchQueries,
   SCOUT_CONFIG_VERSION,
   DEFAULT_RESEARCH_STAGES,
   type ResearchStage,
 } from "@/lib/scoutConfig";
 import { callGrokXSearch } from "@/lib/grokSearch";
+import { searchYouTubeTranscripts } from "@/lib/youtubeSearch";
 
 export const runtime = "nodejs";
 
@@ -147,6 +149,30 @@ async function runGrokStage({
   return { sources, summary: result.summary, query };
 }
 
+/**
+ * Run YouTube transcript search synchronously and return sources.
+ */
+async function runYouTubeStage({
+  withinDays,
+}: {
+  stage: ResearchStage;
+  withinDays: number;
+}): Promise<{ sources: StageSource[]; summary: string; query: string }> {
+  const queries = buildYouTubeSearchQueries();
+
+  const result = await searchYouTubeTranscripts({
+    queries,
+    maxResultsPerQuery: 5,
+    withinDays: withinDays || 30,
+  });
+
+  return {
+    sources: result.sources,
+    summary: result.summary,
+    query: queries.join("; "),
+  };
+}
+
 export async function GET(req: Request) {
   if (!isAuthorized(req)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -182,6 +208,9 @@ export async function GET(req: Request) {
   } else if (providerParam === "perplexity") {
     // Perplexity-only mode (legacy behavior)
     selectedStages = DEFAULT_RESEARCH_STAGES.filter((s) => s.provider === "perplexity");
+  } else if (providerParam === "youtube") {
+    // YouTube-only mode for testing
+    selectedStages = DEFAULT_RESEARCH_STAGES.filter((s) => s.provider === "youtube");
   } else {
     // Default: all enabled stages
     selectedStages = DEFAULT_RESEARCH_STAGES.filter((s) => s.enabled);
@@ -194,14 +223,19 @@ export async function GET(req: Request) {
   // Check required API keys
   const perplexityKey = process.env.PERPLEXITY_API_KEY ?? "";
   const grokKey = process.env.GROK_API_KEY ?? "";
+  const youtubeKey = process.env.YOUTUBE_API_KEY ?? "";
   const hasPerplexityStages = selectedStages.some((s) => s.provider === "perplexity");
   const hasGrokStages = selectedStages.some((s) => s.provider === "grok");
+  const hasYouTubeStages = selectedStages.some((s) => s.provider === "youtube");
 
   if (hasPerplexityStages && !perplexityKey) {
     return NextResponse.json({ error: "PERPLEXITY_API_KEY is missing." }, { status: 500 });
   }
   if (hasGrokStages && !grokKey) {
     return NextResponse.json({ error: "GROK_API_KEY is missing." }, { status: 500 });
+  }
+  if (hasYouTubeStages && !youtubeKey) {
+    return NextResponse.json({ error: "YOUTUBE_API_KEY is missing." }, { status: 500 });
   }
 
   const runId = `${todayIsoUtc()}T${new Date().toISOString().slice(11, 19).replaceAll(":", "-")}Z`;
@@ -229,6 +263,32 @@ export async function GET(req: Request) {
         provider: "grok",
         status: "failed",
         query: buildGrokXSearchQuery({ windowDays: withinDays }),
+        error: msg,
+      });
+    }
+  }
+
+  // Process YouTube stages (synchronous, like Grok)
+  for (const stage of selectedStages.filter((s) => s.provider === "youtube")) {
+    try {
+      const result = await runYouTubeStage({ stage, withinDays });
+      pendingStages.push({
+        stageId: stage.stageId,
+        provider: "youtube",
+        status: "completed",
+        query: result.query,
+        sources: result.sources,
+        summary: result.summary,
+        completedAt: new Date().toISOString(),
+      });
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Unknown error";
+      errors.push({ stageId: stage.stageId, error: msg });
+      pendingStages.push({
+        stageId: stage.stageId,
+        provider: "youtube",
+        status: "failed",
+        query: buildYouTubeSearchQueries().join("; "),
         error: msg,
       });
     }
@@ -262,10 +322,10 @@ export async function GET(req: Request) {
   const hasPendingStages = pendingStages.some((s) => s.status === "pending");
   const allCompleted = pendingStages.every((s) => s.status === "completed" || s.status === "failed");
 
-  // Handle Grok-only mode (no async stages)
+  // Handle sync-only mode (no async Perplexity stages)
   if (!hasPerplexityStages && allCompleted) {
-    // For Grok-only, we can return immediately with the sources
-    const grokSources = pendingStages
+    // For sync-only (Grok/YouTube), we can return immediately with the sources
+    const syncSources = pendingStages
       .filter((s) => s.status === "completed" && s.sources)
       .flatMap((s) => s.sources ?? []);
 
@@ -294,10 +354,10 @@ export async function GET(req: Request) {
         status: s.status,
         sourceCount: s.sources?.length ?? 0,
       })),
-      grokSources: grokSources.length,
+      syncSources: syncSources.length,
       errors: errors.length ? errors : undefined,
       blob: blobWrite,
-      note: "Grok-only run completed. Use finalize to pass sources to weekly-update.",
+      note: "Sync-only run completed (Grok/YouTube). Use finalize to pass sources to weekly-update.",
     });
   }
 

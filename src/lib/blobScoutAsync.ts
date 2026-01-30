@@ -252,7 +252,7 @@ export function aggregateStageSources(stages: PendingStage[]): StageSource[] {
 
   // Sort by stage priority (stageId order in DEFAULT_RESEARCH_STAGES)
   const sortedStages = [...stages].sort((a, b) => {
-    const order = ["grok-x-search", "hackathon", "indie-revenue", "youtube-case-study", "news-roundup"];
+    const order = ["grok-x-search", "youtube-podcasts", "hackathon", "indie-revenue", "youtube-case-study", "news-roundup"];
     const aIdx = order.indexOf(a.stageId);
     const bIdx = order.indexOf(b.stageId);
     return (aIdx === -1 ? 999 : aIdx) - (bIdx === -1 ? 999 : bIdx);
