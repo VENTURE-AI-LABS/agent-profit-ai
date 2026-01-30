@@ -11,8 +11,31 @@ type LiveManifestV1 = {
 };
 
 const LIVE_MANIFEST_PREFIX = "case-studies/live-manifest/";
+const LATEST_POINTER_PATH = "case-studies/latest.json";
+
+type LatestPointer = {
+  manifestUrl: string;
+  snapshotUrl: string;
+  runId: string;
+  updatedAt: string;
+};
 
 async function getLatestManifestUrl(): Promise<string> {
+  // First try direct fetch of latest pointer (faster, no list() call)
+  const base = (process.env.VERCEL_BLOB_BASE_URL ?? "").trim().replace(/\/+$/, "");
+  if (base) {
+    try {
+      const pointerRes = await fetch(`${base}/${LATEST_POINTER_PATH}`, { cache: "no-store" });
+      if (pointerRes.ok) {
+        const pointer = (await pointerRes.json()) as LatestPointer;
+        if (pointer?.manifestUrl) return pointer.manifestUrl;
+      }
+    } catch {
+      // fall through to list()
+    }
+  }
+
+  // Fallback to list() if no base URL or pointer fetch failed
   const res = await list({ prefix: LIVE_MANIFEST_PREFIX, limit: 1000 });
   const blobs = Array.isArray(res.blobs) ? res.blobs : [];
   const latest = blobs.reduce<{ pathname: string; url: string } | null>((acc, b) => {
@@ -148,6 +171,20 @@ export async function writeLiveCaseStudiesToBlob({
     contentType: "application/json",
     addRandomSuffix: false,
     allowOverwrite: false,
+  });
+
+  // Write latest pointer (overwritten each time for direct access)
+  const latestPointer: LatestPointer = {
+    manifestUrl: manifestBlob.url,
+    snapshotUrl: snapshot.url,
+    runId,
+    updatedAt: now,
+  };
+  await put(LATEST_POINTER_PATH, JSON.stringify(latestPointer), {
+    access: "public",
+    contentType: "application/json",
+    addRandomSuffix: false,
+    allowOverwrite: true,
   });
 
   return { snapshotUrl: snapshot.url, manifestUrl: manifestBlob.url, manifest };
