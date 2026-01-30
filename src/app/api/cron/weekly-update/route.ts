@@ -922,6 +922,22 @@ export async function runWeeklyUpdate(req: Request, opts: WeeklyUpdateOptions = 
     const existingIds = new Set(existing.map((x) => x.id));
     const existingUrls = new Set(existing.flatMap((x) => (x.proofSources ?? []).map((s) => s.url)));
 
+    // Extract product names from titles for deduplication
+    // Handles formats like "ProductName: $X..." or "ProductName Reaches $X..." or "ProductName Hits $X..."
+    const extractProductName = (title: string): string => {
+      // First try: extract text before colon
+      const colonMatch = title.match(/^([^:]+):/);
+      if (colonMatch) return colonMatch[1].trim().toLowerCase();
+      // Second try: extract text before common verbs + $
+      const verbMatch = title.match(/^(.+?)\s+(?:Reaches|Hits|Makes|Earns|Generates|Gets)\s+\$/i);
+      if (verbMatch) return verbMatch[1].trim().toLowerCase();
+      // Fallback: first 2-3 words before $
+      const wordsMatch = title.match(/^((?:\w+\s+){1,3})/);
+      if (wordsMatch) return wordsMatch[1].trim().toLowerCase();
+      return title.toLowerCase().slice(0, 30);
+    };
+    const existingProductNames = new Set(existing.map((x) => extractProductName(x.title)));
+
     // Rank candidates: prioritize verified, then by stage priority
     const candidateRank = (x: unknown) => {
       const s = (x as any)?.status;
@@ -950,8 +966,12 @@ export async function runWeeklyUpdate(req: Request, opts: WeeklyUpdateOptions = 
       }
       // Deduplicate by any existing proof URL.
       if (cs.proofSources.some((s) => existingUrls.has(s.url))) continue;
+      // Deduplicate by product name (avoid same product appearing twice)
+      const productName = extractProductName(cs.title);
+      if (existingProductNames.has(productName)) continue;
       added.push(cs);
       cs.proofSources.forEach((s) => existingUrls.add(s.url));
+      existingProductNames.add(productName);
     }
 
     const merged = [...existing, ...added].sort((a, b) => b.date.localeCompare(a.date));

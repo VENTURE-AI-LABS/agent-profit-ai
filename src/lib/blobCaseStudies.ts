@@ -39,8 +39,8 @@ export async function readLiveManifestFromBlob(): Promise<LiveManifestV1 | null>
   const url = await getLatestManifestUrl();
   if (!url) return null;
   try {
-    // Versioned manifest is immutable; safe to cache.
-    return await fetchJson<LiveManifestV1>(url, { cache: "force-cache" });
+    // Use no-store to always get fresh manifest data
+    return await fetchJson<LiveManifestV1>(url, { cache: "no-store" });
   } catch {
     return null;
   }
@@ -50,8 +50,8 @@ export async function readLiveCaseStudiesFromBlob(): Promise<CaseStudy[] | null>
   const manifest = await readLiveManifestFromBlob();
   if (!manifest?.snapshotUrl) return null;
   try {
-    // Snapshot can be cached briefly by CDN; manifest changes will point to a new snapshot URL.
-    const items = await fetchJson<CaseStudy[]>(manifest.snapshotUrl, { cache: "force-cache" });
+    // Use no-store to always get fresh snapshot data
+    const items = await fetchJson<CaseStudy[]>(manifest.snapshotUrl, { cache: "no-store" });
     return Array.isArray(items) ? items : null;
   } catch {
     return null;
