@@ -2,11 +2,11 @@
   "crons": [
     {
       "path": "/api/cron/find-new-case-studies/start",
-      "schedule": "0 20 * * *"
+      "schedule": "0 21 * * *"
     },
     {
       "path": "/api/cron/find-new-case-studies/finalize",
-      "schedule": "7 20 * * *"
+      "schedule": "7 21 * * *"
     },
     {
       "path": "/api/cron/daily-digest",
@@ -14,7 +14,7 @@
     },
     {
       "path": "/api/cron/weekly-digest",
-      "schedule": "0 22 * * 1"
+      "schedule": "0 22 * * 5"
     }
   ]
 }
