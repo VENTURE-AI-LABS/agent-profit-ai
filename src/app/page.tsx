@@ -5,6 +5,7 @@ import type { CaseStudy } from "@/lib/types";
 import { readLiveCaseStudiesFromBlob } from "@/lib/blobCaseStudies";
 
 export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 export default async function Home() {
   const fromBlob = await readLiveCaseStudiesFromBlob();

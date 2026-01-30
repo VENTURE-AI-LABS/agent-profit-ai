@@ -7,6 +7,7 @@ import { readLiveCaseStudiesFromBlob } from "@/lib/blobCaseStudies";
 import MoneyText from "@/components/MoneyText";
 
 export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 function formatVerifiedOn(dateIso: string) {
   // ISO YYYY-MM-DD treated as UTC midnight.

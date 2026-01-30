@@ -75,15 +75,22 @@ export async function GET(req: Request) {
     )
   ).sort();
 
-  return NextResponse.json({
-    success: true,
-    data: caseStudies,
-    meta: {
-      total,
-      limit,
-      offset,
-      hasMore: offset + caseStudies.length < total,
+  return NextResponse.json(
+    {
+      success: true,
+      data: caseStudies,
+      meta: {
+        total,
+        limit,
+        offset,
+        hasMore: offset + caseStudies.length < total,
+      },
+      tags: allTags,
     },
-    tags: allTags,
-  });
+    {
+      headers: {
+        "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
+      },
+    }
+  );
 }
