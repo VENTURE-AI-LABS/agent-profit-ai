@@ -1,5 +1,7 @@
 import { list, put } from "@vercel/blob";
-import type { ResearchProvider } from "./scoutConfig";
+
+/** Research provider type (kept for backwards compatibility with V2 jobs in blob storage) */
+export type ResearchProvider = "perplexity" | "grok" | "youtube";
 
 /**
  * V1 schema (legacy): Single Perplexity async job.
