@@ -30,11 +30,12 @@ export async function GET(req: Request) {
   if (!latest) return NextResponse.json({ error: "No pending Perplexity async job found." }, { status: 404 });
 
   const attempts = Math.max(0, Number(latest.finalizeAttempts ?? 0) || 0);
-  // Allow only 1 retry to avoid accidental looping. That means:
+  // Allow up to 3 retries for more resilience with deep research timing.
   // - First finalize call: attempts becomes 1
   // - Second finalize call: attempts becomes 2
+  // - Third finalize call: attempts becomes 3
   // - Further calls: blocked unless you start a new job
-  if (attempts >= 2) {
+  if (attempts >= 3) {
     return NextResponse.json(
       {
         ok: false,
@@ -67,10 +68,26 @@ export async function GET(req: Request) {
   const forwarded = new Request(url.toString(), req);
   let out = await runWeeklyUpdate(forwarded, { disableSend: true, defaultWithinDays: 7 });
 
-  // One retry: wait a bit then try once more.
-  if (out.status === 202) {
-    await sleep(12_000);
+  // Retry loop: wait and retry up to 2 more times if still pending.
+  // Deep research can take 2-5 minutes, so we give it more time.
+  for (let retry = 0; retry < 2 && out.status === 202; retry++) {
+    await sleep(15_000); // 15 seconds between retries
     out = await runWeeklyUpdate(new Request(url.toString(), req), { disableSend: true, defaultWithinDays: 7 });
+  }
+
+  // Fallback: if async job is still pending/failed after retries, run synchronous search instead.
+  // This ensures we still get results even if deep research times out.
+  if (out.status === 202 || out.status === 502) {
+    const syncUrl = new URL(url.toString());
+    // Remove async request ID to trigger synchronous Perplexity search
+    syncUrl.searchParams.delete("pplxAsyncRequestId");
+    // Ensure parameters are set for sync search
+    syncUrl.searchParams.set("withinDays", String(latest.withinDays || 7));
+    syncUrl.searchParams.set("find", String(latest.find || 10));
+    syncUrl.searchParams.set("searchLimit", String(latest.searchLimit || 20));
+
+    const syncRequest = new Request(syncUrl.toString(), req);
+    out = await runWeeklyUpdate(syncRequest, { disableSend: true, defaultWithinDays: 7 });
   }
 
   return out;

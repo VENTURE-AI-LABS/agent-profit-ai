@@ -6,7 +6,11 @@
     },
     {
       "path": "/api/cron/find-new-case-studies/finalize",
-      "schedule": "7 20 * * *"
+      "schedule": "15 20 * * *"
+    },
+    {
+      "path": "/api/cron/find-new-case-studies/finalize",
+      "schedule": "25 20 * * *"
     },
     {
       "path": "/api/cron/weekly-digest",
