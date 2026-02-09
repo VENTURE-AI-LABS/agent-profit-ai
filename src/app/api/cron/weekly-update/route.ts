@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { jsonrepair } from "jsonrepair";
 import rawCaseStudies from "@/data/case-studies.json";
 import type { CaseStudy, ProofSource } from "@/lib/types";
 import { renderWeeklyDigestEmail } from "@/lib/newsletterDigest";
@@ -632,7 +633,15 @@ async function callClaudeHaiku({
     ? (json.content as any[]).filter((b) => b?.type === "text").map((b) => String(b.text ?? "")).join("")
     : "";
 
-  const arr = JSON.parse(extractJsonArray(text)) as unknown;
+  const raw = extractJsonArray(text);
+  let arr: unknown;
+  try {
+    arr = JSON.parse(raw);
+  } catch {
+    // Claude Haiku sometimes produces malformed JSON (unescaped quotes, trailing commas).
+    // Attempt to repair before giving up.
+    arr = JSON.parse(jsonrepair(raw));
+  }
   if (!Array.isArray(arr)) throw new Error("Claude output JSON was not an array.");
   return arr as unknown[];
 }
