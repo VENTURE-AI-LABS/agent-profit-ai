@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { readLatestPerplexityAsyncJob, updateLatestPerplexityAsyncJob } from "@/lib/blobPerplexityAsync";
-import { runWeeklyUpdate } from "@/app/api/cron/weekly-update/route";
+import { runStoryParser } from "@/app/api/cron/parse-new-stories/route";
 
 export const runtime = "nodejs";
 
@@ -66,13 +66,13 @@ export async function GET(req: Request) {
   // Run the normal pipeline, but using the completed async research results instead of starting a new search.
   // If the Perplexity job is still running, weekly-update will return 202.
   const forwarded = new Request(url.toString(), req);
-  let out = await runWeeklyUpdate(forwarded, { disableSend: true, defaultWithinDays: 7 });
+  let out = await runStoryParser(forwarded, { disableSend: true, defaultWithinDays: 7 });
 
   // Retry loop: wait and retry up to 2 more times if still pending.
   // Deep research can take 2-5 minutes, so we give it more time.
   for (let retry = 0; retry < 2 && out.status === 202; retry++) {
     await sleep(15_000); // 15 seconds between retries
-    out = await runWeeklyUpdate(new Request(url.toString(), req), { disableSend: true, defaultWithinDays: 7 });
+    out = await runStoryParser(new Request(url.toString(), req), { disableSend: true, defaultWithinDays: 7 });
   }
 
   // Fallback: if async job is still pending/failed after retries, OR if it completed
@@ -97,7 +97,7 @@ export async function GET(req: Request) {
     syncUrl.searchParams.set("searchLimit", String(latest.searchLimit || 20));
 
     const syncRequest = new Request(syncUrl.toString(), req);
-    out = await runWeeklyUpdate(syncRequest, { disableSend: true, defaultWithinDays: 7 });
+    out = await runStoryParser(syncRequest, { disableSend: true, defaultWithinDays: 7 });
   }
 
   return out;

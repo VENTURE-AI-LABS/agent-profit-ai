@@ -70,13 +70,14 @@ export async function GET(req: Request) {
           {
             role: "system",
             content:
-              "You are a research agent. Prefer primary sources and reputable reporting. Avoid social media sources (X/Twitter, Facebook, LinkedIn, Reddit, TikTok, Instagram, Discord, Telegram). YouTube is allowed.",
+              "You are a research agent. Prefer primary sources and reputable reporting. Avoid Facebook, TikTok, Instagram, Discord, Telegram. YouTube, X/Twitter indie maker posts, IndieHackers, HackerNews, and ProductHunt are allowed.",
           },
           {
             role: "user",
             content: [
-              "Find publicly verifiable examples of AI agents/agentic workflows that made money with explicit $ amounts.",
+              "Find publicly verifiable examples of AI agents, AI tools, AI SaaS, or AI-powered products that made money with explicit $ amounts.",
               "Exclude fundraising/valuations/grants.",
+              "Include: revenue, MRR, ARR, profit, prize payouts, bounties, sale prices, freelance/consulting income using AI.",
               `Return up to ${Math.max(5, Math.min(25, searchLimit))} sources with title, url, date, snippet (include a verbatim quote containing the $ amount when possible).`,
               "",
               `Query: ${query}`,

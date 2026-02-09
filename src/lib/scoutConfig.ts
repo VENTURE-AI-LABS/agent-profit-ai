@@ -4,7 +4,7 @@ export type ScoutMode = "strict" | "speculation";
  * Bump this when you change default prompts/query logic.
  * Logged into Blob run logs for auditability and rollback.
  */
-export const SCOUT_CONFIG_VERSION = 1 as const;
+export const SCOUT_CONFIG_VERSION = 2 as const;
 
 function compact(s: string) {
   return s.replace(/\s+/g, " ").trim();
@@ -21,13 +21,13 @@ export function buildDefaultScoutQuery({
 
   // Keep < 600 chars (enforced by route handlers).
   return compact(`
-    Find NEW, specific real-world stories ${window} where an AI agent / agentic workflow made money with an explicit $ amount.
-    Include only: revenue/MRR/ARR/profit, prize payouts, bounties, or a sale price.
-    Must be about a specific project/company/person (not market size, not trends).
-    Keywords: MRR, ARR, revenue, profit, bounty, prize, payout, winner, sold for.
-    Agent terms: agent, autonomous, workflow, multi-agent.
-    Exclude: fundraising, funding, raised, valuation, capex, market cap, stock, earnings.
-    Prefer: hackathon/contest winners pages, Devpost, Kaggle, GitHub releases/README, IndieHackers, YouTube case study videos.
+    Find NEW, specific real-world stories ${window} where an AI agent, AI tool, AI SaaS, AI automation, or AI-powered product made money with an explicit $ amount.
+    Include: revenue, MRR, ARR, profit, prize payouts, bounties, sale price, freelance/consulting income using AI.
+    Must be about a specific project, company, person, or product (not market size, not trends).
+    Keywords: MRR, ARR, revenue, profit, bounty, prize, payout, winner, sold for, income, earnings report.
+    Product terms: AI agent, AI tool, AI SaaS, AI chatbot, AI automation, GPT wrapper, LLM app, autonomous agent, agentic workflow, AI assistant, Cursor, Bolt, n8n.
+    Exclude: fundraising, funding rounds, raised, valuation, capex, market cap, stock price.
+    Prefer: IndieHackers, Devpost, Kaggle, GitHub, YouTube, HackerNews, ProductHunt, personal blogs, news articles.
   `);
 }
 
@@ -38,15 +38,15 @@ export function buildClaudeSystemPrompt({ mode }: { mode: ScoutMode }) {
       "",
       "STRICT RULES:",
       "- Output must be a single JSON array ONLY (no markdown, no prose).",
-      "- Each entry MUST describe an AI agent or agentic workflow making money/profit with a specific $ amount.",
+      "- Each entry MUST describe an AI agent, AI tool, AI SaaS, or AI-powered product making money/profit with a specific $ amount.",
       "- EXCLUDE fundraising/valuations/grants; those do NOT count as 'making money'.",
       "- Prefer VERIFIED entries with 2+ proofSources.",
       "- Speculation entries may have 1 proofSource (only if you cannot find a second credible source).",
-      "- Every proofSources.url MUST be taken EXACTLY from the provided sources list (do not invent links).",
+      "- Prefer URLs from the provided sources list. You may also include product website URLs (set kind: 'website') mentioned in the summary/report.",
       "- At least one proofSources.excerpt MUST contain the $ amount and MUST be copied verbatim from a provided snippet (no paraphrasing in excerpts).",
       "- Title MUST include a $ amount (include '$' character).",
       "- If the sources/snippets are too thin to be confident, set status to 'speculation' and explicitly state the proof gap in the description.",
-      "- Do NOT use social media links (e.g. X/Twitter, Facebook, LinkedIn, Reddit, TikTok, Instagram, Discord, Telegram) as the only proof source. YouTube is allowed.",
+      "- Do NOT use Facebook/TikTok/Instagram/Discord/Telegram as the only proof source. YouTube and X/Twitter indie maker posts are allowed with corroboration from a non-social source.",
       "",
       "CaseStudy schema:",
       "{ id, date(YYYY-MM-DD), title, summary, description, profitMechanisms[], tags[], proofSources[{label,url,kind?,excerpt?}], status('verified'|'speculation') }",
@@ -62,13 +62,13 @@ export function buildClaudeSystemPrompt({ mode }: { mode: ScoutMode }) {
     "",
     "RULES (SPECULATION MODE):",
     "- Output must be a single JSON array ONLY (no markdown, no prose).",
-    "- Each entry MUST describe an AI agent or agentic workflow making money/profit with a specific $ amount.",
+    "- Each entry MUST describe an AI agent, AI tool, AI SaaS, or AI-powered product making money/profit with a specific $ amount.",
     "- EXCLUDE fundraising/valuations/grants; those do NOT count as 'making money'.",
     "- Prefer 2+ proofSources when possible; 1 proofSource is allowed for speculation when you cannot find a second credible source.",
-    "- Every proofSources.url MUST be taken EXACTLY from the provided sources list (do not invent links).",
+    "- Prefer URLs from the provided sources list. You may also include product website URLs (set kind: 'website') mentioned in the summary/report.",
     "- If you cannot include a verbatim proofSources.excerpt containing the $ amount, still include the best available excerpt/snippet and clearly state the proof gap in the description.",
     "- Title SHOULD include a $ amount when the sources indicate one (it may be normalized downstream).",
-    "- Do NOT use social media links as the only proof source. YouTube is allowed.",
+    "- Do NOT use Facebook/TikTok/Instagram/Discord/Telegram as the only proof source. YouTube and X/Twitter indie maker posts are allowed with corroboration.",
     "",
     "CaseStudy schema:",
     "{ id, date(YYYY-MM-DD), title, summary, description, profitMechanisms[], tags[], proofSources[{label,url,kind?,excerpt?}], status('verified'|'speculation') }",
@@ -97,7 +97,7 @@ export function buildClaudeUserPrompt({
     "Perplexity summary (may contain extra context; treat as secondary):",
     perplexitySummary.slice(0, 6000),
     "",
-    "Allowed sources (ONLY use these URLs):",
+    "Primary sources (prefer these URLs; you may also include product website URLs with kind: 'website'):",
     JSON.stringify(sources, null, 2),
     "",
     "Task:",
