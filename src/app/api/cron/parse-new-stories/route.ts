@@ -550,12 +550,12 @@ async function callPerplexity({
 
   const instructions = [
     "You are a research agent for AgentProfit.ai.",
-    "Goal: find publicly verifiable examples of AI agents/agentic workflows that made money with explicit $ amounts.",
-    "Exclude fundraising/valuations/grants.",
-    "Prefer official pages, winners lists, public dashboards, or reputable reporting.",
+    "Goal: find SPECIFIC, real examples of AI agents, AI tools, AI SaaS, or AI-powered products that earned money with explicit $ amounts.",
+    "Look for: revenue, MRR, ARR, profit, prize payouts, bounty winnings, sale prices, freelance/consulting income.",
+    "Exclude fundraising/valuations/grants/market size projections.",
+    "Prefer: IndieHackers, ProductHunt, HackerNews, Devpost, Kaggle, YouTube, GitHub, personal blogs, news articles. X/Twitter indie maker posts are allowed.",
     "Output MUST be valid JSON matching the provided schema.",
     "In sources[].snippet, include a VERBATIM quote that contains the $ amount.",
-    "Avoid social media sources (Facebook/TikTok/Instagram/Discord/Telegram). YouTube and X/Twitter indie maker posts are allowed.",
     `Return at most ${Math.max(5, Math.min(25, numSearchResults))} sources.`,
   ].join("\n");
 
@@ -586,17 +586,18 @@ async function callPerplexity({
           {
             role: "user",
             content: [
-              "Find publicly verifiable examples of AI agents/agentic workflows that made money with explicit $ amounts.",
-              "Exclude fundraising/valuations/grants.",
-              "Avoid social media sources as proof (Facebook/TikTok/Instagram/Discord/Telegram). YouTube and X/Twitter indie maker posts are allowed.",
-              `Return at most ${Math.max(5, Math.min(25, numSearchResults))} sources.`,
+              "Find SPECIFIC, real examples of AI agents, AI tools, AI SaaS products, or AI-powered businesses that earned money with explicit $ amounts.",
+              "I need concrete case studies with named products/companies/people and verifiable dollar figures (revenue, MRR, ARR, profit, prize money, bounty payouts).",
+              "Exclude: fundraising rounds, valuations, grants, market size projections, trend articles.",
+              "Good sources: IndieHackers posts, ProductHunt launches with revenue, HackerNews discussions, YouTube case studies, blog posts with revenue numbers, Devpost winners, X/Twitter indie maker revenue screenshots.",
+              `Return up to ${Math.max(5, Math.min(25, numSearchResults))} sources, each with a verbatim snippet containing a $ amount.`,
               "",
               `Query: ${query}`,
             ].join("\n"),
           },
         ],
         web_search_options: {
-          search_context_size: "low",
+          search_context_size: "high",
           ...toolFilters,
         },
       }),
