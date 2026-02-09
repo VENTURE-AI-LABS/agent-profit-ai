@@ -738,10 +738,14 @@ export async function runWeeklyUpdate(req: Request, opts: WeeklyUpdateOptions = 
 
       const resp = job.response ?? {};
       const content = String(resp?.choices?.[0]?.message?.content ?? "");
-      const searchResults = Array.isArray(resp?.search_results) ? (resp.search_results as any[]) : [];
+      let searchResults = Array.isArray(resp?.search_results) ? (resp.search_results as any[]) : [];
       const citations = Array.isArray(resp?.citations)
         ? (resp.citations as any[]).map(String).filter(Boolean)
         : searchResults.map((s) => String((s as any)?.url ?? "")).filter(Boolean);
+      // Deep-research returns citations but not search_results — build sources from citations.
+      if (searchResults.length === 0 && citations.length > 0) {
+        searchResults = citations.filter((u) => isHttpUrl(u)).map((u) => ({ title: u, url: u }));
+      }
       p = {
         model: String(resp?.model ?? job.model ?? "sonar-deep-research"),
         content,

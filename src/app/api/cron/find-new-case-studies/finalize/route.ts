@@ -75,9 +75,19 @@ export async function GET(req: Request) {
     out = await runWeeklyUpdate(new Request(url.toString(), req), { disableSend: true, defaultWithinDays: 7 });
   }
 
-  // Fallback: if async job is still pending/failed after retries, run synchronous search instead.
-  // This ensures we still get results even if deep research times out.
-  if (out.status === 202 || out.status === 502) {
+  // Fallback: if async job is still pending/failed after retries, OR if it completed
+  // but found 0 case studies (e.g. deep-research didn't return search_results),
+  // run synchronous sonar-pro search instead.
+  let shouldFallbackToSync = out.status === 202 || out.status === 502;
+  if (!shouldFallbackToSync && out.status === 200) {
+    try {
+      const body = await out.clone().json();
+      if (body?.ok && Array.isArray(body?.added) && body.added.length === 0) {
+        shouldFallbackToSync = true;
+      }
+    } catch { /* ignore parse errors */ }
+  }
+  if (shouldFallbackToSync) {
     const syncUrl = new URL(url.toString());
     // Remove async request ID to trigger synchronous Perplexity search
     syncUrl.searchParams.delete("pplxAsyncRequestId");
