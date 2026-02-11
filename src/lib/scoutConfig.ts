@@ -4,7 +4,7 @@ export type ScoutMode = "strict" | "speculation";
  * Bump this when you change default prompts/query logic.
  * Logged into Blob run logs for auditability and rollback.
  */
-export const SCOUT_CONFIG_VERSION = 2 as const;
+export const SCOUT_CONFIG_VERSION = 3 as const;
 
 function compact(s: string) {
   return s.replace(/\s+/g, " ").trim();
@@ -26,8 +26,8 @@ export function buildDefaultScoutQuery({
     Must be about a specific project, company, person, or product (not market size, not trends).
     Keywords: MRR, ARR, revenue, profit, bounty, prize, payout, winner, sold for, income, earnings report.
     Product terms: AI agent, AI tool, AI SaaS, AI chatbot, AI automation, GPT wrapper, LLM app, autonomous agent, agentic workflow, AI assistant, Cursor, Bolt, n8n.
-    Exclude: fundraising, funding rounds, raised, valuation, capex, market cap, stock price.
-    Prefer: IndieHackers, Devpost, Kaggle, GitHub, YouTube, HackerNews, ProductHunt, personal blogs, news articles.
+    Exclude: fundraising, funding rounds, raised, valuation, capex, market cap, stock price, quarterly earnings reports, market size forecasts.
+    Prefer: IndieHackers, Devpost, DoraHacks, Kaggle, GitHub, YouTube, HackerNews, ProductHunt, personal blogs, news articles.
   `);
 }
 
@@ -38,8 +38,8 @@ export function buildClaudeSystemPrompt({ mode }: { mode: ScoutMode }) {
       "",
       "STRICT RULES:",
       "- Output must be a single JSON array ONLY (no markdown, no prose).",
-      "- Each entry MUST describe an AI agent, AI tool, AI SaaS, or AI-powered product making money/profit with a specific $ amount.",
-      "- EXCLUDE fundraising/valuations/grants; those do NOT count as 'making money'.",
+      "- Each entry MUST describe a SPECIFIC AI agent, AI tool, AI SaaS, or AI-powered product making money/profit with a specific $ amount.",
+      "- EXCLUDE: fundraising/valuations/grants, big-company quarterly earnings (e.g. Alphabet/Microsoft/Atlassian Q4 revenue), market size forecasts, global spending projections. We want SPECIFIC products/projects, not corporate earnings.",
       "- Prefer VERIFIED entries with 2+ proofSources.",
       "- Speculation entries may have 1 proofSource (only if you cannot find a second credible source).",
       "- Prefer URLs from the provided sources list. You may also include product website URLs (set kind: 'website') mentioned in the summary/report.",
@@ -62,8 +62,8 @@ export function buildClaudeSystemPrompt({ mode }: { mode: ScoutMode }) {
     "",
     "RULES (SPECULATION MODE):",
     "- Output must be a single JSON array ONLY (no markdown, no prose).",
-    "- Each entry MUST describe an AI agent, AI tool, AI SaaS, or AI-powered product making money/profit with a specific $ amount.",
-    "- EXCLUDE fundraising/valuations/grants; those do NOT count as 'making money'.",
+    "- Each entry MUST describe a SPECIFIC AI agent, AI tool, AI SaaS, or AI-powered product making money/profit with a specific $ amount.",
+    "- EXCLUDE: fundraising/valuations/grants, big-company quarterly earnings (e.g. Alphabet/Microsoft/Atlassian Q4 revenue), market size forecasts, global spending projections. We want SPECIFIC products/projects, not corporate earnings.",
     "- Prefer 2+ proofSources when possible; 1 proofSource is allowed for speculation when you cannot find a second credible source.",
     "- Prefer URLs from the provided sources list. You may also include product website URLs (set kind: 'website') mentioned in the summary/report.",
     "- If you cannot include a verbatim proofSources.excerpt containing the $ amount, still include the best available excerpt/snippet and clearly state the proof gap in the description.",

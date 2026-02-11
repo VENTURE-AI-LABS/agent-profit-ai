@@ -120,6 +120,21 @@ const MONEY_CONTEXT_DENY = [
   "series b",
   "series c",
   "seed round",
+  "quarterly revenue",
+  "quarterly earnings",
+  "q1 revenue",
+  "q2 revenue",
+  "q3 revenue",
+  "q4 revenue",
+  "earnings report",
+  "fiscal quarter",
+  "fiscal year",
+  "yoy growth",
+  "year-over-year",
+  "total revenue",
+  "global spending",
+  "market size",
+  "market forecast",
 ];
 
 function looksLikeFundingOrValuationContext(s: string) {
@@ -773,7 +788,15 @@ export async function runWeeklyUpdate(req: Request, opts: WeeklyUpdateOptions = 
       });
     }
 
-    const sources = (Array.isArray(p.searchResults) ? p.searchResults : [])
+    // sonar-pro returns citations but NOT search_results — build sources from citations.
+    let searchResults = Array.isArray(p.searchResults) ? p.searchResults : [];
+    if (searchResults.length === 0 && Array.isArray(p.citations) && p.citations.length > 0) {
+      searchResults = p.citations
+        .filter((u: string) => isHttpUrl(u))
+        .map((u: string) => ({ title: u, url: u }));
+    }
+
+    const sources = searchResults
       .map((r) => ({
         title: String(r?.title ?? "").trim(),
         url: String(r?.url ?? "").trim(),
